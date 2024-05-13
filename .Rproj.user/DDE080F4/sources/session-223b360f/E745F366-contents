@@ -1,0 +1,21 @@
+library(tidyverse)
+library(data.table)
+data<-fread(file = "../PreFer_data/training_data/PreFer_train_data.csv") %>% 
+  as_tibble()
+bg_data <- read_csv("../PreFer_data/other_data/PreFer_train_background_data.csv")
+out <- read_csv("../PreFer_data/training_data/PreFer_train_outcome.csv")
+
+clean_data <- clean_df(df = data, background_df = bg_data)
+neams(clean_data)
+train_save_model(clean_data, outcome_df = out)
+model <- readRDS("~/GitHub/fertility-prediction-challenge/model.rds")
+summary(model)
+model$fitted.values
+library(ROCit)
+obj <- rocit(class = model$y, score = model$fitted.values)
+plot(obj)
+summary(obj)
+ksplot(obj)
+obj$neg_D
+
+table(model$y, ifelse(model$fitted.values>0.25,1,0))
