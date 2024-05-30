@@ -1,1 +1,0 @@
-Rscript script.R DATA_FILE BACKGROUND_DATA_FILE [--output OUTPUT_FILE]

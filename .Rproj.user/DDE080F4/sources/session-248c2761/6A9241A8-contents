@@ -1,0 +1,763 @@
+
+
+
+library(tidyverse)
+library(data.table)
+library(spikeSlabGAM)
+df<-fread(file = "../PreFer_data/training_data/PreFer_train_data.csv") %>%
+  as_tibble()
+background_df <- read_csv("../PreFer_data/other_data/PreFer_train_background_data.csv")
+
+
+code<-read_csv("../PreFer_data/codebooks/PreFer_codebook.csv")
+code_summ<-read_csv("../PreFer_data/codebooks/PreFer_codebook_summary.csv")
+
+table(code_summ$survey)
+code_summ[code_summ$survey=="Religion and Ethnicity"&code_summ$last3letters =="143",]
+
+code[code$var_name=="aantalki",1:2]
+
+out <- read_csv("../PreFer_data/training_data/PreFer_train_outcome.csv")
+
+
+# listing variables to keep
+var_sub <- c("nomem_encr","outcome_available","cf20m009","cf20m011","cf20m022",
+             "cf20m128","cf20m129","cf20m130","cf20m454","cf20m526",
+             "ca20g005","ca20g006","ca20g007","ca20g008","ca20g009","ca20g010",
+             "ca20g011","ca20g057","ca20g058","ca20g060","ca20g061","ca20g062",
+             "ci20m008","ch20m004","ch20m018","ch20m178","cp20l010","cp20l016",
+             "cp20l019","cp20l201","cr20m030","cr20m041","cr20m089","cr20m134",
+             "cr20m137","cr20m138","cr20m139","cr20m140","cr20m141","cr20m143",
+             "cr20m148","cr20m149","cr20m150","cr20m151","cr20m162","cs20m001",
+             "cs20m063","cs20m283","cs20m285","cs20m286","cs20m287","birthyear_bg",
+             "gender_bg","migration_background_bg","belbezig_2020","burgstat_2020",
+             "nettoink_f_2020","oplcat_2020","partner_2020","sted_2020",
+             "woning_2020","woonvorm_2020","ca20g078","ca20g065","ca20g087","nettohh_f_2020")
+var_bg2 <- c("positie","aantalhh","aantalki")
+
+# selecting variables from df
+data_red<-df %>%
+  select(all_of(var_sub))
+
+# retrieving from the past
+
+# cf20m009; What is the year of birth of your mother?
+data_red %>%
+  count(outcome_available, is.na(cf20m009))
+data_red[["cf20m009"]][is.na(data_red[["cf20m009"]])]<-df[["cf19l009"]][is.na(data_red[["cf20m009"]])]
+data_red[["cf20m009"]][is.na(data_red[["cf20m009"]])]<-df[["cf18k009"]][is.na(data_red[["cf20m009"]])]
+data_red[["cf20m009"]][is.na(data_red[["cf20m009"]])]<-df[["cf17j009"]][is.na(data_red[["cf20m009"]])]
+data_red %>%
+  count(outcome_available, is.na(cf20m009))
+
+# cf20m011; Is your biological mother still alive?
+data_red %>%
+  count(outcome_available, is.na(cf20m011))
+data_red[["cf20m011"]][is.na(data_red[["cf20m011"]])]<-df[["cf19l011"]][is.na(data_red[["cf20m011"]])]
+data_red[["cf20m011"]][is.na(data_red[["cf20m011"]])]<-df[["cf18k011"]][is.na(data_red[["cf20m011"]])]
+data_red[["cf20m011"]][is.na(data_red[["cf20m011"]])]<-df[["cf17j011"]][is.na(data_red[["cf20m011"]])]
+data_red %>%
+  count(outcome_available, is.na(cf20m011))
+
+# cf20m022; How often did you see your mother over the past 12 months?
+data_red %>%
+  count(outcome_available, is.na(cf20m022))
+data_red[["cf20m022"]][is.na(data_red[["cf20m022"]])]<-df[["cf19l022"]][is.na(data_red[["cf20m022"]])]
+data_red[["cf20m022"]][is.na(data_red[["cf20m022"]])]<-df[["cf18k022"]][is.na(data_red[["cf20m022"]])]
+data_red[["cf20m022"]][is.na(data_red[["cf20m022"]])]<-df[["cf17j022"]][is.na(data_red[["cf20m022"]])]
+data_red %>%
+  count(outcome_available, is.na(cf20m022))
+
+# cf20m128 Do you think you will have [more] children in the future?
+data_red %>%
+  count(outcome_available, is.na(cf20m128))
+data_red[["cf20m128"]][is.na(data_red[["cf20m128"]])]<-df[["cf19l128"]][is.na(data_red[["cf20m128"]])]
+data_red[["cf20m128"]][is.na(data_red[["cf20m128"]])]<-df[["cf18k128"]][is.na(data_red[["cf20m128"]])]
+data_red[["cf20m128"]][is.na(data_red[["cf20m128"]])]<-df[["cf17j128"]][is.na(data_red[["cf20m128"]])]
+data_red %>%
+  count(outcome_available, is.na(cf20m128))
+
+# cf20m129 How many [more] children do you think you will have in the future?
+data_red %>%
+  count(outcome_available, is.na(cf20m129))
+data_red[["cf20m129"]][is.na(data_red[["cf20m129"]])]<-df[["cf19l129"]][is.na(data_red[["cf20m129"]])]
+data_red[["cf20m129"]][is.na(data_red[["cf20m129"]])]<-df[["cf18k129"]][is.na(data_red[["cf20m129"]])]
+data_red[["cf20m129"]][is.na(data_red[["cf20m129"]])]<-df[["cf17j129"]][is.na(data_red[["cf20m129"]])]
+data_red %>%
+  count(outcome_available, is.na(cf20m129))
+
+# cf20m130 Within how many years do you hope to have your [first/next] child?
+data_red %>%
+  count(outcome_available, is.na(cf20m130))
+data_red[["cf20m130"]][is.na(data_red[["cf20m130"]])]<-df[["cf19l130"]][is.na(data_red[["cf20m130"]])]
+data_red[["cf20m130"]][is.na(data_red[["cf20m130"]])]<-df[["cf18k130"]][is.na(data_red[["cf20m130"]])]
+data_red[["cf20m130"]][is.na(data_red[["cf20m130"]])]<-df[["cf17j130"]][is.na(data_red[["cf20m130"]])]
+data_red %>%
+  count(outcome_available, is.na(cf20m130))
+
+# cf20m454 Did you ever have any children?
+data_red %>%
+  count(outcome_available, is.na(cf20m454))
+data_red[["cf20m454"]][is.na(data_red[["cf20m454"]])]<-df[["cf19l454"]][is.na(data_red[["cf20m454"]])]
+data_red[["cf20m454"]][is.na(data_red[["cf20m454"]])]<-df[["cf18k454"]][is.na(data_red[["cf20m454"]])]
+data_red[["cf20m454"]][is.na(data_red[["cf20m454"]])]<-df[["cf17j454"]][is.na(data_red[["cf20m454"]])]
+data_red %>%
+  count(outcome_available, is.na(cf20m454))
+
+
+# cf20m526 How would you generally describe the relationship with your family?
+data_red %>%
+  count(outcome_available, is.na(cf20m526))
+# no past
+
+# ca20g005 On 31 December 2019, did you possess one or more of the following assets?
+data_red %>%
+  count(outcome_available, is.na(ca20g005))
+data_red[["ca20g005"]][is.na(data_red[["ca20g005"]])]<-df[["ca18f005"]][is.na(data_red[["ca20g005"]])]
+data_red %>%
+  count(outcome_available, is.na(ca20g005))
+# ca20g006 On 31 December 2019, did you possess one or more of the following assets?
+data_red %>%
+  count(outcome_available, is.na(ca20g006))
+data_red[["ca20g006"]][is.na(data_red[["ca20g006"]])]<-df[["ca18f006"]][is.na(data_red[["ca20g006"]])]
+data_red %>%
+  count(outcome_available, is.na(ca20g006))
+# ca20g007 On 31 December 2019, did you possess one or more of the following assets?
+data_red %>%
+  count(outcome_available, is.na(ca20g007))
+data_red[["ca20g007"]][is.na(data_red[["ca20g007"]])]<-df[["ca18f007"]][is.na(data_red[["ca20g007"]])]
+data_red %>%
+  count(outcome_available, is.na(ca20g007))
+# ca20g008 On 31 December 2019, did you possess one or more of the following assets?
+data_red %>%
+  count(outcome_available, is.na(ca20g008))
+data_red[["ca20g008"]][is.na(data_red[["ca20g008"]])]<-df[["ca18f008"]][is.na(data_red[["ca20g008"]])]
+data_red %>%
+  count(outcome_available, is.na(ca20g008))
+# ca20g009 On 31 December 2019, did you possess one or more of the following assets?
+data_red %>%
+  count(outcome_available, is.na(ca20g009))
+data_red[["ca20g009"]][is.na(data_red[["ca20g009"]])]<-df[["ca18f009"]][is.na(data_red[["ca20g009"]])]
+data_red %>%
+  count(outcome_available, is.na(ca20g009))
+# ca20g010 On 31 December 2019, did you possess one or more of the following assets?
+data_red %>%
+  count(outcome_available, is.na(ca20g010))
+data_red[["ca20g010"]][is.na(data_red[["ca20g010"]])]<-df[["ca18f010"]][is.na(data_red[["ca20g010"]])]
+data_red %>%
+  count(outcome_available, is.na(ca20g010))
+# ca20g011 On 31 December 2019, did you possess one or more of the following assets?
+data_red %>%
+  count(outcome_available, is.na(ca20g011))
+data_red[["ca20g011"]][is.na(data_red[["ca20g011"]])]<-df[["ca18f011"]][is.na(data_red[["ca20g011"]])]
+data_red %>%
+  count(outcome_available, is.na(ca20g011))
+
+
+# ca20g057 On 31 December 2019, did you have one or more personal loans, revolving credit arrangement(s),.....
+data_red %>%
+  count(outcome_available, is.na(ca20g057))
+data_red[["ca20g057"]][is.na(data_red[["ca20g057"]])]<-df[["ca18f057"]][is.na(data_red[["ca20g057"]])]
+data_red %>%
+  count(outcome_available, is.na(ca20g057))
+# ca20g058 On 31 December 2019, did you have a loan or credit arrangement based on a pledge?
+data_red %>%
+  count(outcome_available, is.na(ca20g058))
+data_red[["ca20g058"]][is.na(data_red[["ca20g058"]])]<-df[["ca18f058"]][is.na(data_red[["ca20g058"]])]
+data_red %>%
+  count(outcome_available, is.na(ca20g058))
+# ca20g060 On 31 December 2019, On 31 December 2019, did you have money loaned from family, friends or acquaintances?
+data_red %>%
+  count(outcome_available, is.na(ca20g060))
+data_red[["ca20g060"]][is.na(data_red[["ca20g060"]])]<-df[["ca18f060"]][is.na(data_red[["ca20g060"]])]
+data_red %>%
+  count(outcome_available, is.na(ca20g060))
+# ca20g061 On 31 December 2019, did you have any other credits, loans or debts not mentioned so far?
+data_red %>%
+  count(outcome_available, is.na(ca20g061))
+data_red[["ca20g061"]][is.na(data_red[["ca20g061"]])]<-df[["ca18f061"]][is.na(data_red[["ca20g061"]])]
+data_red %>%
+  count(outcome_available, is.na(ca20g061))
+# ca20g062 On 31 December 2019, did you have one or more of the following matters? - None of these
+data_red %>%
+  count(outcome_available, is.na(ca20g062))
+data_red[["ca20g062"]][is.na(data_red[["ca20g062"]])]<-df[["ca18f062"]][is.na(data_red[["ca20g062"]])]
+data_red %>%
+  count(outcome_available, is.na(ca20g062))
+
+
+# ca20g078 On 31 December 2019, did you possess one or more of the following assets?
+data_red %>%
+  count(outcome_available, is.na(ca20g078))
+data_red[["ca20g078"]][is.na(data_red[["ca20g078"]])]<-df[["ca18f078"]][is.na(data_red[["ca20g078"]])]
+data_red %>%
+  count(outcome_available, is.na(ca20g078))
+
+# ca20g065 Please indicate on a scale from 0 to 10 how hard it is/was to pay off
+data_red %>%
+  count(outcome_available, is.na(ca20g065))
+data_red[["ca20g065"]][is.na(data_red[["ca20g065"]])]<-df[["ca18f065"]][is.na(data_red[["ca20g065"]])]
+data_red %>%
+  count(outcome_available, is.na(ca20g065))
+
+# ca20g087 On 31 December 2019, were there overdue payments on one or more credit car
+data_red %>%
+  count(outcome_available, is.na(ca20g087))
+data_red[["ca20g087"]][is.na(data_red[["ca20g087"]])]<-df[["ca18f087"]][is.na(data_red[["ca20g087"]])]
+data_red %>%
+  count(outcome_available, is.na(ca20g087))
+
+
+# ci20m008 Did you receive income as employee in 2019? Note: this only concerns income received through paid work....
+data_red %>%
+  count(outcome_available, is.na(ci20m008))
+data_red[["ci20m008"]][is.na(data_red[["ci20m008"]])]<-df[["ci19l008"]][is.na(data_red[["ci20m008"]])]
+data_red[["ci20m008"]][is.na(data_red[["ci20m008"]])]<-df[["ci18k008"]][is.na(data_red[["ci20m008"]])]
+data_red[["ci20m008"]][is.na(data_red[["ci20m008"]])]<-df[["ci17j008"]][is.na(data_red[["ci20m008"]])]
+data_red %>%
+  count(outcome_available, is.na(ci20m008))
+
+# ch20m004 How would you describe your health, generally speaking?
+data_red %>%
+  count(outcome_available, is.na(ch20m004))
+data_red[["ch20m004"]][is.na(data_red[["ch20m004"]])]<-df[["ch19l004"]][is.na(data_red[["ch20m004"]])]
+data_red[["ch20m004"]][is.na(data_red[["ch20m004"]])]<-df[["ch18k004"]][is.na(data_red[["ch20m004"]])]
+data_red[["ch20m004"]][is.na(data_red[["ch20m004"]])]<-df[["ch17j004"]][is.na(data_red[["ch20m004"]])]
+data_red %>%
+  filter(outcome_available==1) %>%
+  count(is.na(ca20g062), is.na(ch20m018))
+# ch20m018 Do you suffer from any kind of long-standing disease
+data_red %>%
+  count(outcome_available, is.na(ch20m018))
+data_red[["ch20m018"]][is.na(data_red[["ch20m018"]])]<-df[["ch19l018"]][is.na(data_red[["ch20m018"]])]
+data_red[["ch20m018"]][is.na(data_red[["ch20m018"]])]<-df[["ch18k018"]][is.na(data_red[["ch20m018"]])]
+data_red[["ch20m018"]][is.na(data_red[["ch20m018"]])]<-df[["ch17j018"]][is.na(data_red[["ch20m018"]])]
+data_red %>%
+  count(outcome_available, is.na(ch20m018))
+# ch20m178 anxiety or depression
+data_red %>%
+  count(outcome_available, is.na(ch20m178))
+data_red[["ch20m178"]][is.na(data_red[["ch20m178"]])]<-df[["ch19l178"]][is.na(data_red[["ch20m178"]])]
+data_red[["ch20m178"]][is.na(data_red[["ch20m178"]])]<-df[["ch18k178"]][is.na(data_red[["ch20m178"]])]
+data_red[["ch20m178"]][is.na(data_red[["ch20m178"]])]<-df[["ch17j178"]][is.na(data_red[["ch20m178"]])]
+data_red %>%
+  count(outcome_available, is.na(ch20m178))
+
+
+# cp20l010 On the whole, how happy would you say you are?
+data_red %>%
+  count(outcome_available, is.na(cp20l010))
+data_red[["cp20l010"]][is.na(data_red[["cp20l010"]])]<-df[["cp19k010"]][is.na(data_red[["cp20l010"]])]
+data_red[["cp20l010"]][is.na(data_red[["cp20l010"]])]<-df[["cp18j010"]][is.na(data_red[["cp20l010"]])]
+data_red[["cp20l010"]][is.na(data_red[["cp20l010"]])]<-df[["cp17i010"]][is.na(data_red[["cp20l010"]])]
+data_red %>%
+  count(outcome_available, is.na(cp20l010))
+# cp20l016 I am satisfied with my life
+data_red %>%
+  count(outcome_available, is.na(cp20l016))
+data_red[["cp20l016"]][is.na(data_red[["cp20l016"]])]<-df[["cp19k016"]][is.na(data_red[["cp20l016"]])]
+data_red[["cp20l016"]][is.na(data_red[["cp20l016"]])]<-df[["cp18j016"]][is.na(data_red[["cp20l016"]])]
+data_red[["cp20l016"]][is.na(data_red[["cp20l016"]])]<-df[["cp17i016"]][is.na(data_red[["cp20l016"]])]
+data_red %>%
+  count(outcome_available, is.na(cp20l016))
+# cp20l019 Generally speaking, would you say that most people can be trusted
+data_red %>%
+  count(outcome_available, is.na(cp20l019))
+data_red[["cp20l019"]][is.na(data_red[["cp20l019"]])]<-df[["cp19k019"]][is.na(data_red[["cp20l019"]])]
+data_red[["cp20l019"]][is.na(data_red[["cp20l019"]])]<-df[["cp18j019"]][is.na(data_red[["cp20l019"]])]
+data_red[["cp20l019"]][is.na(data_red[["cp20l019"]])]<-df[["cp17i019"]][is.na(data_red[["cp20l019"]])]
+data_red %>%
+  count(outcome_available, is.na(cp20l019))
+# cp20l201 I'm always optimistic about my future.
+data_red %>%
+  count(outcome_available, is.na(cp20l201))
+data_red[["cp20l201"]][is.na(data_red[["cp20l201"]])]<-df[["cp19k201"]][is.na(data_red[["cp20l201"]])]
+data_red[["cp20l201"]][is.na(data_red[["cp20l201"]])]<-df[["cp18j201"]][is.na(data_red[["cp20l201"]])]
+data_red[["cp20l201"]][is.na(data_red[["cp20l201"]])]<-df[["cp17i201"]][is.na(data_red[["cp20l201"]])]
+data_red %>%
+  count(outcome_available, is.na(cp20l201))
+
+
+
+# cr20m030 Which of the following statements best matches your idea of God?
+data_red %>%
+  count(outcome_available, is.na(cr20m030))
+data_red[["cr20m030"]][is.na(data_red[["cr20m030"]])]<-df[["cr19l030"]][is.na(data_red[["cr20m030"]])]
+data_red[["cr20m030"]][is.na(data_red[["cr20m030"]])]<-df[["cr18k030"]][is.na(data_red[["cr20m030"]])]
+data_red[["cr20m030"]][is.na(data_red[["cr20m030"]])]<-df[["cr17j030"]][is.na(data_red[["cr20m030"]])]
+data_red %>%
+  count(outcome_available, is.na(cr20m030))
+
+# cr20m041 Aside from special occasions such as weddings and funerals, how often do y…
+data_red %>%
+  count(outcome_available, is.na(cr20m041))
+data_red[["cr20m041"]][is.na(data_red[["cr20m041"]])]<-df[["cr19l041"]][is.na(data_red[["cr20m041"]])]
+data_red[["cr20m041"]][is.na(data_red[["cr20m041"]])]<-df[["cr18k041"]][is.na(data_red[["cr20m041"]])]
+data_red[["cr20m041"]][is.na(data_red[["cr20m041"]])]<-df[["cr17j041"]][is.na(data_red[["cr20m041"]])]
+data_red %>%
+  count(outcome_available, is.na(cr20m041))
+
+# cr20m089 At home, do you generally speak Dutch or another language?
+data_red %>%
+  count(outcome_available, is.na(cr20m089))
+data_red[["cr20m089"]][is.na(data_red[["cr20m089"]])]<-df[["cr19l089"]][is.na(data_red[["cr20m089"]])]
+data_red[["cr20m089"]][is.na(data_red[["cr20m089"]])]<-df[["cr18k089"]][is.na(data_red[["cr20m089"]])]
+data_red[["cr20m089"]][is.na(data_red[["cr20m089"]])]<-df[["cr17j089"]][is.na(data_red[["cr20m089"]])]
+data_red %>%
+  count(outcome_available, is.na(cr20m089))
+
+
+# cr20m134 Were you raised within a certain faith? ### more missing
+data_red %>%
+  count(outcome_available, is.na(cr20m134))
+data_red[["cr20m134"]][is.na(data_red[["cr20m134"]])]<-df[["cr19l134"]][is.na(data_red[["cr20m134"]])]
+data_red %>%
+  count(outcome_available, is.na(cr20m134))
+
+# cr20m137 and other all complete
+
+# cr20m143 Do you see yourself as belonging to a church community or religious group?
+data_red %>%
+  count(outcome_available, is.na(cr20m143))
+data_red[["cr20m143"]][is.na(data_red[["cr20m143"]])]<-df[["cr19l143"]][is.na(data_red[["cr20m143"]])]
+data_red %>%
+  count(outcome_available, is.na(cr20m143))
+# cr20m162 To what extent would you describe yourself as a religious person?
+data_red %>%
+  count(outcome_available, is.na(cr20m162))
+data_red[["cr20m162"]][is.na(data_red[["cr20m162"]])]<-df[["cr19l162"]][is.na(data_red[["cr20m162"]])]
+data_red %>%
+  count(outcome_available, is.na(cr20m162))
+
+
+# cs20m001 How satisfied are you with the amount of leisure time that you have?
+data_red %>%
+  count(outcome_available, is.na(cs20m001))
+data_red[["cs20m001"]][is.na(data_red[["cs20m001"]])]<-df[["cs19l001"]][is.na(data_red[["cs20m001"]])]
+data_red[["cs20m001"]][is.na(data_red[["cs20m001"]])]<-df[["cs18k001"]][is.na(data_red[["cs20m001"]])]
+data_red[["cs20m001"]][is.na(data_red[["cs20m001"]])]<-df[["cs17j001"]][is.na(data_red[["cs20m001"]])]
+data_red %>%
+  count(outcome_available, is.na(cs20m001))
+
+# cs20m063 Did you perform any informal care over the past 12 months?
+data_red %>%
+  count(outcome_available, is.na(cs20m063))
+data_red[["cs20m063"]][is.na(data_red[["cs20m063"]])]<-df[["cs19l063"]][is.na(data_red[["cs20m063"]])]
+data_red[["cs20m063"]][is.na(data_red[["cs20m063"]])]<-df[["cs18k063"]][is.na(data_red[["cs20m063"]])]
+data_red[["cs20m063"]][is.na(data_red[["cs20m063"]])]<-df[["cs17j063"]][is.na(data_red[["cs20m063"]])]
+data_red %>%
+  count(outcome_available, is.na(cs20m063))
+
+# cs20m283 How satisfied are you with your social contacts?
+data_red %>%
+  count(outcome_available, is.na(cs20m283))
+data_red[["cs20m283"]][is.na(data_red[["cs20m283"]])]<-df[["cs19l283"]][is.na(data_red[["cs20m283"]])]
+data_red[["cs20m283"]][is.na(data_red[["cs20m283"]])]<-df[["cs18k283"]][is.na(data_red[["cs20m283"]])]
+data_red[["cs20m283"]][is.na(data_red[["cs20m283"]])]<-df[["cs17j283"]][is.na(data_red[["cs20m283"]])]
+data_red %>%
+  count(outcome_available, is.na(cs20m283))
+
+# cs20m285 There are enough people I can count on in case of a misfortune
+data_red %>%
+  count(outcome_available, is.na(cs20m285))
+data_red[["cs20m285"]][is.na(data_red[["cs20m285"]])]<-df[["cs19l285"]][is.na(data_red[["cs20m285"]])]
+data_red[["cs20m285"]][is.na(data_red[["cs20m285"]])]<-df[["cs18k285"]][is.na(data_red[["cs20m285"]])]
+data_red[["cs20m285"]][is.na(data_red[["cs20m285"]])]<-df[["cs17j285"]][is.na(data_red[["cs20m285"]])]
+data_red %>%
+  count(outcome_available, is.na(cs20m285))
+
+# cs20m286 I know a lot of people that I can fully rely on
+data_red %>%
+  count(outcome_available, is.na(cs20m286))
+data_red[["cs20m286"]][is.na(data_red[["cs20m286"]])]<-df[["cs19l286"]][is.na(data_red[["cs20m286"]])]
+data_red[["cs20m286"]][is.na(data_red[["cs20m286"]])]<-df[["cs18k286"]][is.na(data_red[["cs20m286"]])]
+data_red[["cs20m286"]][is.na(data_red[["cs20m286"]])]<-df[["cs17j286"]][is.na(data_red[["cs20m286"]])]
+data_red %>%
+  count(outcome_available, is.na(cs20m286))
+
+# cs20m287 There are enough people to whom I feel closely connected
+data_red %>%
+  count(outcome_available, is.na(cs20m287))
+data_red[["cs20m287"]][is.na(data_red[["cs20m287"]])]<-df[["cs19l287"]][is.na(data_red[["cs20m287"]])]
+data_red[["cs20m287"]][is.na(data_red[["cs20m287"]])]<-df[["cs18k287"]][is.na(data_red[["cs20m287"]])]
+data_red[["cs20m287"]][is.na(data_red[["cs20m287"]])]<-df[["cs17j287"]][is.na(data_red[["cs20m287"]])]
+data_red %>%
+  count(outcome_available, is.na(cs20m287))
+
+
+
+
+code[code$var_name=="belbezig_2020",1:2]
+
+data_red %>%
+  count(outcome_available, is.na(nettoink_f_2020))
+data_red[["nettoink_f_2020"]][is.na(data_red[["nettoink_f_2020"]])]<-df[["nettoink_f_2019"]][is.na(data_red[["nettoink_f_2020"]])]
+data_red[["nettoink_f_2020"]][is.na(data_red[["nettoink_f_2020"]])]<-df[["nettoink_f_2018"]][is.na(data_red[["nettoink_f_2020"]])]
+
+data_red %>%
+  count(outcome_available, is.na(nettohh_f_2020))
+data_red[["nettohh_f_2020"]][is.na(data_red[["nettohh_f_2020"]])]<-df[["nettohh_f_2019"]][is.na(data_red[["nettohh_f_2020"]])]
+data_red[["nettohh_f_2020"]][is.na(data_red[["nettohh_f_2020"]])]<-df[["nettohh_f_2018"]][is.na(data_red[["nettohh_f_2020"]])]
+
+
+# selecting variables from data background
+bg_red <- background_df %>%
+  select(nomem_encr, wave, all_of(var_bg2)) %>%
+  filter(wave > 202000) %>%
+  select(-wave) %>%
+  distinct() %>%
+  group_by(nomem_encr) %>%
+  slice_tail(n=1) %>%
+  ungroup()
+
+data_red <- data_red %>%
+  left_join(bg_red) %>%
+  filter(outcome_available == 1)
+
+
+# recoding variables
+data_red<-data_red %>%
+  mutate(having_children_future = case_when(cf20m128==1~0,
+                                            cf20m128==3~1,
+                                            cf20m128==2~2,
+                                            TRUE~NA),
+         assets = case_when(ca20g009==1 &ca20g005 ==0 & ca20g006==0 &
+                              ca20g007==0& ca20g008==0 & ca20g010==1 & ca20g011==1 ~ 0,
+                            ca20g007==1 ~ 1,
+                            ca20g006==1 ~ 2,
+                            ca20g005==1 ~ 3,
+                            ca20g008==1 ~ 4,
+                            (ca20g010==2 | ca20g011==2)  ~ 5,
+                            TRUE ~ NA),
+         presence_debt = case_when(ci20m008==2 ~ 0,
+                                   ca20g057==1 ~ 1,
+                                   ca20g058==1 ~ 1,
+                                   ca20g060==1 ~ 1,
+                                   ca20g061==1 ~ 1,
+                                   ca20g062==1 ~ 1,
+                                   TRUE ~ NA),
+         employment_status = case_when(belbezig_2020==1~0,
+                                       belbezig_2020 %in% c(2,3)~1,
+                                       belbezig_2020 %in% c(4,5,6,11)~2,
+                                       belbezig_2020 %in% c(8,9,10,12)~3,
+                                       belbezig_2020 %in% c(7,14) ~ 4,
+                                       belbezig_2020 == 13 ~ 5
+         ),
+         type_dwelling = case_when(woning_2020 %in% c(1,4) ~ 0,
+                                   woning_2020 %in% c(2,3) ~ 1,
+                                   TRUE ~ NA),
+         log_net_household_income = log(nettohh_f_2020+1),
+         log_net_personal_income = log(nettoink_f_2020+1),
+         desired_nr_add_children = case_when(cf20m129==1~1,
+                                             cf20m129==2~2,
+                                             cf20m129>2~3,
+                                             is.na(cf20m129)~0),
+
+         years_next_children = case_when(cf20m130<=1~1,
+                                         cf20m130>1 & cf20m130<=3 ~2,
+                                         cf20m130>3 & cf20m130<=10 ~3,
+                                         cf20m130>10~4,
+                                         is.na(cf20m130)~0),
+
+         birth_year_mother_cat = case_when(cf20m009<1945 ~0,
+                                           cf20m009>=1945 & cf20m009<1950 ~  1,
+                                           cf20m009>=1950 & cf20m009<1955 ~  2,
+                                           cf20m009>=1955 & cf20m009<1960 ~  3,
+                                           cf20m009>=1960 & cf20m009<1965 ~  4,
+                                           cf20m009>=1965 & cf20m009<1970 ~  5,
+                                           cf20m009>=1970 & cf20m009<1975 ~  6,
+                                           cf20m009>=1975 ~ 7,
+                                           TRUE~NA),
+
+         mig_by_origin = case_when(migration_background_bg==0~0,
+                                   migration_background_bg %in% c(101,201) ~1,
+                                   migration_background_bg %in% c(102,202) ~2,
+                                   TRUE ~ NA),
+         mig_by_generation = case_when(migration_background_bg==0~0,
+                                       migration_background_bg %in% c(101,102) ~1,
+                                       migration_background_bg %in% c(201,202) ~2,
+                                       TRUE ~ NA),
+         civil_status = case_when(burgstat_2020==1 ~0,
+                                  burgstat_2020 %in% c(2,3,4)~1,
+                                  burgstat_2020==5~2),
+         religious_participation = case_when(cr20m041 %in% c(1,2,3,4)~ 0,
+                                             cr20m041 %in% c(5,6)~1,
+                                             TRUE~NA)
+
+  ) %>%
+  mutate(having_children_future=factor(having_children_future,
+                                       levels=c(0,1,2),
+                                       labels=c("Yes","No","Don't know")),
+         assets = factor(assets,
+                         levels = c(0,1,2,3,4,5),
+                         labels = c("Possession of Assets: type unspecified","real estate",
+                                    "investments","insurence","vehicle","other")),
+         presence_debt = factor(assets,levels=c(0,1),
+                                labels=c("Not having debts/loans","Having debts/loans")),
+         employment_status = factor(employment_status,
+                                    levels=c(0,1,2,3,4,5),
+                                    labels=c("Paid employment","Self-employed","Unemployed","Inactive","Student or too young","Other"),
+         ),
+         type_dwelling = factor(type_dwelling,
+                                levels=c(0,1),
+                                labels=c("Owned","Rented")),
+         desired_nr_add_children = factor(desired_nr_add_children,
+                                          levels=c(0,1,2,3),
+                                          labels=c("None","1 child","2 children","3 or more children")),
+         years_next_children = factor(years_next_children,
+                                      levels=c(0,1,2,3,4),
+                                      labels=c("Never","1 year or less","Between 1 and 3 years","Between 3 and 10 years",
+                                               "More than 10 years")),
+         birth_year_mother_cat = factor(birth_year_mother_cat,
+                                        levels=c(0,1,2,3,4,5,6,7),
+                                        labels=c("Before 1945","1945-1949","1950-1954","1955-1959",
+                                                 "1960-1964","1965-1969","1970-1974","After 1975")),
+         mig_by_origin = factor(mig_by_origin,
+                                levels=c(0,1,2),
+                                labels=c("Native","Western Migrant","Non-Western Migrant")),
+         mig_by_generation = factor(mig_by_generation,
+                                    levels=c(0,1,2),
+                                    labels=c("Native","First Generation Migrant",
+                                             "Second Generation Migrant")),
+         civil_status = factor(civil_status,
+                               levels=c(0,1,2),
+                               labels=c("Married","No longer married","Never married")),
+         religious_participation = factor(religious_participation,
+                                          levels=c(0,1),
+                                          labels=c("At least once a week","Less than once a week")))
+
+
+
+
+code_summ[code_summ$survey=="Religion and Ethnicity"&code_summ$last3letters =="143",]
+
+code[code$var_name=="oplcat_2020",3:4]
+
+
+data_red$gender_bg <- factor(data_red$gender_bg,levels = c(1,2), labels = c("Male", "Female"))
+data_red$partner_2020 <- factor(data_red$partner_2020,levels = c(0,1), labels = c("No", "Yes"))
+data_red$urban_type <- factor(data_red$sted_2020, levels = 1:5, c("Extremely urban", "Very urban",
+                                                                  "Moderately urban", "Slightly urban", "Not urban"))
+data_red$long_disease <- factor(data_red$ch20m018,levels = c(1,2), labels = c("Yes", "No"))
+data_red$anxiety <- factor(data_red$ch20m178,levels = c(0,1), labels = c("No", "Yes"))
+
+table(data_red$oplcat_2020)
+
+
+# listing variables to keep
+var_sub <- c("nomem_encr","outcome_available","cf20m009","cf20m011","cf20m022",
+             "cf20m128","cf20m129","cf20m130","cf20m454","cf20m526",
+             "ca20g005","ca20g006","ca20g007","ca20g008","ca20g009","ca20g010",
+             "ca20g011","ca20g057","ca20g058","ca20g060","ca20g061","ca20g062",
+             "ci20m008","ch20m004","ch20m018","ch20m178","cp20l010","cp20l016",
+             "cp20l019","cp20l201","cr20m030","cr20m041","cr20m089","cr20m134",
+             "cr20m137","cr20m138","cr20m139","cr20m140","cr20m141","cr20m143",
+             "cr20m148","cr20m149","cr20m150","cr20m151","cr20m162","cs20m001",
+             "cs20m063","cs20m283","cs20m285","cs20m286","cs20m287","birthyear_bg",
+             "gender_bg","migration_background_bg","belbezig_2020","burgstat_2020",
+             "nettoink_f_2020","oplcat_2020","partner_2020","sted_2020",
+             "woning_2020","woonvorm_2020","ca20g078","ca20g065","ca20g087","nettohh_f_2020")
+var_bg2 <- c("positie","aantalhh","aantalki")
+
+data_red$aantalki[data_red$aantalki>2]<-"3+"
+table(data_red$aantalki)
+
+data_red$oplcat_2020<-factor(data_red$oplcat_2020)
+data_red$urban_type2<-as.character(data_red$urban_type)
+data_red$urban_type2[data_red$urban_type2!="Not urban"]<-"Urban"
+data_red$rely <- factor(data_red$cs20m286)
+
+
+model_df <- merge(data_red, out, by = "nomem_encr")
+
+model_est_all <- model_df[, c("new_child","having_children_future","years_next_children",
+                          "desired_nr_add_children","birthyear_bg","partner_2020","gender_bg",
+                          "urban_type2", "civil_status","religious_participation",
+                          "employment_status", "type_dwelling",
+                          "oplcat_2020","aantalki")]
+model_est<-model_est_all[complete.cases(model_est_all),]
+mcmc <- list(nChains = 3, burnin = 1000, chainLength = 4000,
+             thin = 3, reduceRet = TRUE)
+options(mc.cores=3)
+
+# colMeans(is.na(model_est_all))
+#
+# # SSGAM - all variables
+#
+# model <- spikeSlabGAM(new_child ~(religious_participation)+(gender_bg+birthyear_bg)^2+oplcat_2020+
+#                         having_children_future+years_next_children+desired_nr_add_children+employment_status+
+#                         (civil_status + aantalki)+urban_type2+(partner_2020+type_dwelling),
+#                       data = model_est, family = "binomial", mcmc = mcmc)
+# summary(model)
+# plot(model)
+#
+# # modello 2 - solo "having children in future"
+#
+#
+model_est_CF <- model_df[, c("new_child","birthyear_bg","partner_2020","gender_bg",
+                              "civil_status",
+                              "employment_status",
+                              "aantalki")]
+# model_est_CF_compl<-model_est_CF[complete.cases(model_est_CF),]
+# model_CF <- spikeSlabGAM(new_child ~(gender_bg+birthyear_bg+civil_status)^2+
+#                         employment_status+
+#                         (aantalki),
+#                       data = model_est_CF_compl, family = "binomial", mcmc = mcmc)
+#
+# summary(model_CF)
+#
+# class <- model_est_CF_compl$new_child
+# score <- model_CF$fitted[,2]
+#
+#
+#
+# library(ROCit)
+# class <- model_est$new_child
+# score <- model$fitted[,2]
+# # -------------------------------------------------------------
+# measure <- measureit(score = score, class = class,
+#                      measure = c("ACC", "SENS", "FSCR"))
+#
+#
+# plot(measure$Cutoff, measure$ACC, type="l")
+# lines(measure$Cutoff, measure$SENS, type="l", col=2)
+#
+# cut <- measure$Cutoff[which.max(measure$ACC)]
+# tab_out <-table(class, ifelse(score>.4,1,0))
+# Acc <- sum(diag(tab_out))/sum(tab_out)
+# Prec <- tab_out[2,2]/sum(tab_out[,2])
+# Rec <- tab_out[2,2]/sum(tab_out[2,])
+# F1 <- 2*(Prec*Rec)/(Prec+Rec)
+#
+#
+
+
+### tentativo CV
+
+G<-21
+n_all <- nrow(model_est_all)
+size <- n_all/G
+i<-1
+set.seed(123)
+indices<-sample(x = 1:n_all, size = n_all, replace = F)
+groups<-list()
+for(i in 1:G){
+  groups[[i]]<-indices[1:size]
+  indices<-indices[-c(1:size)]
+}
+
+cut <- 0.4
+tab_out_vec <-Acc_vec <- Prec_vec <- Rec_vec <- F1_vec <- numeric(G)
+tab_out_vec <-Acc_vec_compl <- Prec_vec_compl <- Rec_vec_compl <- F1_vec_compl <- numeric(G)
+
+pred_list<-list()
+m1_indices<-list()
+classes_list <- list()
+
+for(i in 1:G){
+  train <- model_est_all[-c(groups[[i]]),]
+  test<- model_est_all[c(groups[[i]]),]
+  train_fit <- train[complete.cases(train),]
+
+  train_bis <- model_est_CF[-c(groups[[i]]),]
+  test_bis<- model_est_CF[c(groups[[i]]),]
+  train_fit_bis <- train_bis[complete.cases(train_bis),]
+
+
+  model_kfcv <- spikeSlabGAM(new_child ~(religious_participation)+(gender_bg+birthyear_bg)^2+oplcat_2020+
+                          having_children_future+years_next_children+desired_nr_add_children+employment_status+
+                          (civil_status + aantalki)+urban_type2+(partner_2020+type_dwelling),
+                        data = train_fit, family = "binomial", mcmc = mcmc)
+  model_bis <- spikeSlabGAM(new_child ~(civil_status+gender_bg+birthyear_bg)^2+
+                             employment_status+
+                             aantalki,
+                           data = train_fit_bis, family = "binomial", mcmc = mcmc)
+
+  test_indices <- 1:nrow(test)
+  pred_m1<-test_indices[complete.cases(test)]
+  compl_set2<-test_indices[complete.cases(test_bis)]
+  pred_m2<- compl_set2[!compl_set2%in%pred_m1]
+  #resid <- test_indices[!test_indices%in%c(pred_m1,pred_m2)]
+
+  pred<-numeric(nrow(test))
+
+  pred[pred_m1]<-predict(model_kfcv, newdata = test[pred_m1,])[,]
+  if(length(pred_m2)>0){
+    if(length(pred_m2)==1){
+      pred[pred_m2]<-predict(model_bis, newdata = as.data.frame(test[c(pred_m2,1),]))[1,1]
+    }else{
+      pred[pred_m2]<-predict(model_bis, newdata = as.data.frame(test[pred_m2,]))[,]
+    }
+
+  }
+  class <- test$new_child
+  score <- pred
+  pred_list[[i]]<-pred
+  m1_indices[[i]]<-pred_m1
+  classes_list[[i]] <- class
+
+
+
+  tab_out <-table(class, ifelse(score>cut,1,0))
+  Acc_vec[i] <- sum(diag(tab_out))/sum(tab_out)
+  Prec_vec[i] <- tab_out[2,2]/sum(tab_out[,2])
+  Rec_vec[i] <- tab_out[2,2]/sum(tab_out[2,])
+  F1_vec[i] <- 2*(Prec_vec[i] *Rec_vec[i])/(Prec_vec[i] +Rec_vec[i])
+
+
+  tab_out <-table(class[pred_m1], ifelse(score[pred_m1]>cut,1,0))
+  Acc_vec_compl[i] <- sum(diag(tab_out))/sum(tab_out)
+  Prec_vec_compl[i] <- tab_out[2,2]/sum(tab_out[,2])
+  Rec_vec_compl[i] <- tab_out[2,2]/sum(tab_out[2,])
+  F1_vec_compl[i] <- 2*(Prec_vec_compl[i] *Rec_vec_compl[i])/(Prec_vec_compl[i] +Rec_vec_compl[i])
+}
+mean(Acc_vec)
+mean(Prec_vec)
+mean(Rec_vec)
+mean(F1_vec)
+
+mean(Acc_vec_compl)
+mean(Prec_vec_compl)
+mean(Rec_vec_compl)
+mean(F1_vec_compl)
+
+
+#####################################################
+
+model_est2 <- model_df[, c("new_child","having_children_future","years_next_children",
+                              "desired_nr_add_children","birthyear_bg","partner_2020","gender_bg",
+                              "urban_type2", "civil_status","religious_participation",
+                              "employment_status", "type_dwelling",
+                              "oplcat_2020","aantalki","long_disease","anxiety","rely")]
+model_est2<-model_est2[complete.cases(model_est2),]
+
+model2 <- spikeSlabGAM(new_child ~(religious_participation)+partner_2020+ (gender_bg+birthyear_bg)^2+oplcat_2020+employment_status+
+                        #having_children_future+years_next_children+desired_nr_add_children+
+                        (civil_status + aantalki)+long_disease+anxiety+(urban_type2+type_dwelling)+rely,
+                      data = model_est2, family = "binomial", mcmc = mcmc)
+
+summary(model2)
+plot(model2,aggregate = median)
+library(ROCit)
+
+class <- model_est$new_child
+score <- model2$fitted[,2]
+# -------------------------------------------------------------
+measure <- measureit(score = score, class = class,
+                     measure = c("ACC", "SENS", "FSCR"))
+names(measure)
+#> [1] "Cutoff" "Depth"  "TP"     "FP"     "TN"     "FN"     "ACC"    "SENS"
+#> [9] "FSCR"
+plot(measure$ACC~measure$Cutoff, type = "l")
+
+measure$Cutoff[which.max(measure$ACC)]
+
+tab_out<-table(model2$y, ifelse(model2$fitted[,2]>measure$Cutoff[which.max(measure$ACC)],1,0))
+
+Acc <- sum(diag(tab_out))/sum(tab_out)
+Prec <- tab_out[2,2]/sum(tab_out[,2])
+Rec <- tab_out[2,2]/sum(tab_out[2,])
+F1 <- 2*(Prec*Rec)/(Prec+Rec)
+
+
+

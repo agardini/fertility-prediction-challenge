@@ -1,3 +1,0 @@
-#!/usr/bin/env Rscript
-
-install.packages(c("data.table","tidyverse", "mgcv"), repos="https://cran.r-project.org", dependencies=TRUE)
