@@ -211,7 +211,7 @@ clean_df <- function(df, background_df = NULL){
 fake_test_set = read.csv("PreFer_fake_data.csv")
 bg_data = read.csv("PreFer_fake_background_data.csv")
 df_test = clean_df(df = fake_test_set, background_df = bg_data)
-
+colnames(df_test)
 # impute na on test set and keep this dataset also
 load("model_data.RData")
 dim(data_new)
@@ -262,7 +262,62 @@ colnames(df_test)[id_not_in_imputed]
 # there is not presence_debt because all the entries are 0 in the original df_test
 mean(is.na(df_test$presence_debt))
 
-# construct the other variables on df_test and df_test_imputed
+# construct the other variables on df_test 
+colnames(df_test)
+df_test = df_test %>% select(-c(cf20m129,  cr20m137,  cr20m138,   cr20m139, cr20m140 ,cr20m141, cr20m148, cr20m149, cr20m150, cr20m151, cf20m130, ca20g065, presence_debt,employment_status))
+str(df_test)
+
+# compare with X_pref here
+load("X_pref.rda")
+column_order = c("cf20m009", "cf20m011", "cf20m022", "cf20m024", "cf20m128", 
+                 "cf20m454", "cf20m526", "ca20g005", "ca20g006", "ca20g007", "ca20g008", 
+                 "ca20g009", "ca20g010", "ca20g011", "ca20g057", "ca20g058", "ca20g060", 
+                 "ca20g061", "ca20g062", "ci20m008", "ch20m004", "ch20m018", "ch20m178", 
+                 "cp20l010", "cp20l016", "cp20l019", "cp20l201", "cr20m030", "cr20m041", 
+                 "cr20m089", "cr20m134", "cr20m143", "cr20m162", "cs20m001", "cs20m063", 
+                 "cs20m283", "cs20m285", "cs20m286", "cs20m287", "birthyear_bg", 
+                 "gender_bg", "migration_background_bg", "belbezig_2020", "burgstat_2020", 
+                 "nettoink_f_2020", "oplcat_2020", "partner_2020", "sted_2020", 
+                 "woning_2020", "woonvorm_2020", "positie", "aantalhh", "aantalki", 
+                 "ca20g078", "ca20g087", "nettohh_f_2020", "having_children_future", 
+                 "assets", "type_dwelling", "log_net_household_income", "log_net_personal_income", 
+                 "desired_nr_add_children", "years_next_children", "birth_year_mother_cat", 
+                 "mig_by_origin", "mig_by_generation", "civil_status", "religious_participation"
+)
+
+df_test = df_test %>%
+  select(all_of(column_order))
+
+colnames(X_pref) == colnames(df_test)
+
+df_test_num = df_test %>% select_if(is.numeric) 
+colnames(df_test_num)
+df_test_cat = df_test %>%  select_if(is.factor) 
+dim(df_test_num)
+dim(df_test_cat)
+colnames(df_test_cat)
+
+
+# create power of 2 and power of 3
+df_test_num_w_power =  df_test_num %>%
+  mutate(across(where(is.numeric), list(square = ~ .^2, cube = ~ .^3, sqrt_root = ~.^(.5)), .names = "{col}_{fn}"))
+colnames(df_test_num_w_power)
+str(df_test_num_w_power)
+dim(df_test_num_w_power)
+
+df_test_extended = dplyr::bind_cols(df_test_num_w_power, df_test_cat)
+
+
+# construct the new variables on the imputed df
+df_test_num_w_power =  df_test_num %>%
+  mutate(across(where(is.numeric), list(square = ~ .^2, cube = ~ .^3, sqrt_root = ~.^(.5)), .names = "{col}_{fn}"))
+colnames(df_test_num_w_power)
+str(df_test_num_w_power)
+dim(df_test_num_w_power)
+
+df_test_extended = dplyr::bind_cols(df_test_num_w_power, df_test_cat)
+
+
 
 
 
@@ -371,9 +426,13 @@ create_all_models = function(list_varmat_best_model, verbose=T){
 set_all_best_models = create_all_models(list_varmat_best_model = list_varmat_best_model, verbose = T)
 
 
+
+# verify that indeed the df_test_extended have the same column as the train set 
+all(colnames(df_test_extended) == colnames(out_rf$x))
+
 # prediction step
-predict_w_set_best_model = function(df_test, set_all_best_models, df_test_imputed, list_varmat_best_model){
-  n_to_predict = nrow(df_test)
+predict_w_set_best_model = function(df_test_extended, set_all_best_models, df_test_imputed, list_varmat_best_model){
+  n_to_predict = nrow(df_test_extended)
   # create vector of prediction
   vec_prediction = vector(mode = "numeric", length = n_to_predict)
   for(i in seq(n_to_predict)){
