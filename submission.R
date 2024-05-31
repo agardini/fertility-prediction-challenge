@@ -207,11 +207,18 @@ clean_df <- function(df, background_df = NULL){
 
 #-------------------------------- START
 
+# load the swag output with random forest
+load("swag_rf_prefer_on_extended_dataset.rda")
+out$CVs_f1_score
+
 # check returned df when running this on fake data
 fake_test_set = read.csv("PreFer_fake_data.csv")
 bg_data = read.csv("PreFer_fake_background_data.csv")
+
 df_test = clean_df(df = fake_test_set, background_df = bg_data)
 colnames(df_test)
+df_test$nomem_encr
+
 # impute na on test set and keep this dataset also
 load("model_data.RData")
 dim(data_new)
@@ -219,6 +226,8 @@ dim(df_test)
 all(colnames(data_new) %in% colnames(df_test) )
 id_col_not_in_test = which(!colnames(data_new) %in% colnames(df_test) )
 colnames(data_new)[id_col_not_in_test]
+
+# the outcome is the only variable not present, so all good
 
 # more data preparation steps
 # set to NA over all char columns when empty string
@@ -242,61 +251,62 @@ df_test = df_test %>%
   select(-c(nomem_encr, outcome_available))
 
 
+df_test <- df_test %>%
+  mutate(across(where(is.character), as.factor)) %>% 
+  select(-c(cf20m129,  cr20m137,  cr20m138,   cr20m139, cr20m140 ,cr20m141, cr20m148, cr20m149, cr20m150, cr20m151, cf20m130, ca20g065, presence_debt,employment_status))
+str(df_test)
+# Column names in the desired order
+column_order <- c("cf20m009", "cf20m011", "cf20m022", "cf20m024", "cf20m128", 
+                  "cf20m454", "cf20m526", "ca20g005", "ca20g006", "ca20g007", 
+                  "ca20g008", "ca20g009", "ca20g010", "ca20g011", "ca20g057", 
+                  "ca20g058", "ca20g060", "ca20g061", "ca20g062", "ci20m008", 
+                  "ch20m004", "ch20m018", "ch20m178", "cp20l010", "cp20l016", 
+                  "cp20l019", "cp20l201", "cr20m030", "cr20m041", "cr20m089", 
+                  "cr20m134", "cr20m143", "cr20m162", "cs20m001", "cs20m063", 
+                  "cs20m283", "cs20m285", "cs20m286", "cs20m287", "birthyear_bg", 
+                  "gender_bg", "migration_background_bg", "belbezig_2020", 
+                  "burgstat_2020", "nettoink_f_2020", "oplcat_2020", "partner_2020", 
+                  "sted_2020", "woning_2020", "woonvorm_2020", "positie", 
+                  "aantalhh", "aantalki", "ca20g078", "ca20g087", "nettohh_f_2020", 
+                  "having_children_future", "assets", "type_dwelling", 
+                  "log_net_household_income", "log_net_personal_income", 
+                  "desired_nr_add_children", "years_next_children", 
+                  "birth_year_mother_cat", "mig_by_origin", "mig_by_generation", 
+                  "civil_status", "religious_participation")
 
-# the outcome is the only variable not present, so all good
+# Reorder columns using dplyr
+df_test <- df_test %>%
+  select(all_of(column_order))
+
 # impute df
 # to use later if we dont have any best perfoming model where all variables are observed
-library(mice)
-str(df_test)
-df_test <- df_test %>%
-  mutate(across(where(is.character), as.factor))
-str(df_test)
+
+
 
 # try imputation with mice
+# library(mice)
 # df_test_imputed = complete(mice(df_test))
 
 # imputation random forest
 df_test_imputed = missForest::missForest(df_test)$ximp
 id_not_in_imputed = which(!colnames(df_test) %in% colnames(df_test_imputed) )
-colnames(df_test)[id_not_in_imputed]
+
 # there is not presence_debt because all the entries are 0 in the original df_test
 mean(is.na(df_test$presence_debt))
 
-# construct the other variables on df_test 
-colnames(df_test)
-df_test = df_test %>% select(-c(cf20m129,  cr20m137,  cr20m138,   cr20m139, cr20m140 ,cr20m141, cr20m148, cr20m149, cr20m150, cr20m151, cf20m130, ca20g065, presence_debt,employment_status))
-str(df_test)
-
 # compare with X_pref here
 load("X_pref.rda")
-column_order = c("cf20m009", "cf20m011", "cf20m022", "cf20m024", "cf20m128", 
-                 "cf20m454", "cf20m526", "ca20g005", "ca20g006", "ca20g007", "ca20g008", 
-                 "ca20g009", "ca20g010", "ca20g011", "ca20g057", "ca20g058", "ca20g060", 
-                 "ca20g061", "ca20g062", "ci20m008", "ch20m004", "ch20m018", "ch20m178", 
-                 "cp20l010", "cp20l016", "cp20l019", "cp20l201", "cr20m030", "cr20m041", 
-                 "cr20m089", "cr20m134", "cr20m143", "cr20m162", "cs20m001", "cs20m063", 
-                 "cs20m283", "cs20m285", "cs20m286", "cs20m287", "birthyear_bg", 
-                 "gender_bg", "migration_background_bg", "belbezig_2020", "burgstat_2020", 
-                 "nettoink_f_2020", "oplcat_2020", "partner_2020", "sted_2020", 
-                 "woning_2020", "woonvorm_2020", "positie", "aantalhh", "aantalki", 
-                 "ca20g078", "ca20g087", "nettohh_f_2020", "having_children_future", 
-                 "assets", "type_dwelling", "log_net_household_income", "log_net_personal_income", 
-                 "desired_nr_add_children", "years_next_children", "birth_year_mother_cat", 
-                 "mig_by_origin", "mig_by_generation", "civil_status", "religious_participation"
-)
+all(colnames(df_test) == colnames(X_pref))
+all(colnames(df_test_imputed) == colnames(X_pref))
+str(df_test)
 
-df_test = df_test %>%
-  select(all_of(column_order))
-
-colnames(X_pref) == colnames(df_test)
-
+# construct the other variables on df_test 
 df_test_num = df_test %>% select_if(is.numeric) 
 colnames(df_test_num)
 df_test_cat = df_test %>%  select_if(is.factor) 
 dim(df_test_num)
 dim(df_test_cat)
 colnames(df_test_cat)
-
 
 # create power of 2 and power of 3
 df_test_num_w_power =  df_test_num %>%
@@ -306,44 +316,59 @@ str(df_test_num_w_power)
 dim(df_test_num_w_power)
 
 df_test_extended = dplyr::bind_cols(df_test_num_w_power, df_test_cat)
-
+all(colnames(df_test_extended) == colnames(out$x))
 
 # construct the new variables on the imputed df
-df_test_num_w_power =  df_test_num %>%
+df_test_imputed_num = df_test_imputed %>% select_if(is.numeric) 
+df_test_imputed_cat = df_test_imputed %>%  select_if(is.factor) 
+df_test_imputed_num_w_power =  df_test_imputed_num %>%
   mutate(across(where(is.numeric), list(square = ~ .^2, cube = ~ .^3, sqrt_root = ~.^(.5)), .names = "{col}_{fn}"))
-colnames(df_test_num_w_power)
-str(df_test_num_w_power)
-dim(df_test_num_w_power)
-
-df_test_extended = dplyr::bind_cols(df_test_num_w_power, df_test_cat)
 
 
+df_test_imputed_extended = dplyr::bind_cols(df_test_imputed_num_w_power, df_test_imputed_cat)
+all(colnames(df_test_imputed_extended) == colnames(out$x))
 
-
-
-# load the swag output with random forest
-load("swag_rf_prefer_on_extended_dataset.rda")
-out_rf = out
-rm(out)
 # plot F1 score of swag output
-plot(unlist(lapply(X = out_rf$CVs_f1_score, FUN = function(x){max(x, na.rm = T)})), type="l",
+plot(unlist(lapply(X = out$CVs_f1_score, FUN = function(x){max(x, na.rm = T)})), type="l",
      xlab="Model dimension", ylab="Performance (F1 score)")
 grid(col="grey80", lty=1)
 
 
 # select the set of best models
 # get a given quantile over all f1 score over all models of all dimensions
-quant_to_consider = .95
-quantile_f1_score_to_consider = quantile(unlist(out_rf$CVs_f1_score), na.rm = T, probs = quant_to_consider)
+alpha=c(.95, .9, .85, .8, .75)
+mat = matrix(NA, ncol=length(out$CVs_f1_score), length(alpha))
+for(i in seq(length(alpha))){
+  for(j in seq(length(out$CVs_f1_score))){
+    mat[i,j] = quantile(out$CVs_f1_score[[j]], probs = alpha[i], na.rm = T)
+  }
+}
+
+
+plot(mat[1,], type="l", ylim=c(.2, .9))
+lines(mat[2,], col=2)
+lines(mat[3,], col=3)
+lines(mat[4,], col=4)
+# 30 , 35
+quantile(out$CVs_f1_score[[35]], probs = .9,na.rm = T)
+# prendre tous les modele de taillep lus petite egale a 35 qui on un score plus grand
+
+
+
+quantile(c(1,2,3))
+
+quant_to_consider = .9
+quantile_f1_score_to_consider = quantile(unlist(out$CVs_f1_score), na.rm = T, probs = quant_to_consider)
 quantile_f1_score_to_consider
 find_models_above_treshold<- function(vec, threshold) {
   which(vec > threshold)
 }
+
 # construct best model id list
-best_models_list <- lapply(out_rf$CVs_f1_score, find_models_above_treshold, quantile_f1_score_to_consider)
+best_models_list <- lapply(out$CVs_f1_score, find_models_above_treshold, quantile_f1_score_to_consider)
 
 # obtain the variables associated with each best models
-dim(out_rf$x)
+dim(out$x)
 extract_associated_variables = function(list_varmat, list_best_model){
   
   max_dimension = length(list_varmat)
@@ -362,10 +387,11 @@ extract_associated_variables = function(list_varmat, list_best_model){
 }
 
 
-list_varmat_best_model = extract_associated_variables(list_varmat = out_rf$VarMat, list_best_model = list_best_model)
+list_varmat_best_model = extract_associated_variables(list_varmat = out$VarMat, list_best_model = list_best_model)
 
 # check number of best models
-total_nbr_of_best_models = sum(unlist(lapply(list_varmat_best_model, FUN = function(x){dim(x)[2]} )))
+total_nbr_of_best_models = sum(unlist(lapply(best_models_list, FUN = function(x){length(x)})))
+total_nbr_of_best_models
 
 # create a big model that countain all ranger models
 create_all_models = function(list_varmat_best_model, verbose=T){
@@ -373,6 +399,8 @@ create_all_models = function(list_varmat_best_model, verbose=T){
   max_dimension = length(list_varmat_best_model)
   counter_model = 1
   for(i in seq(max_dimension)){
+    
+
 
     # these are for the dimension where there are no best models
     if(is.null(list_varmat_best_model[[i]])){
@@ -380,9 +408,10 @@ create_all_models = function(list_varmat_best_model, verbose=T){
     }
     # this is for the dimensions where there is only one "best" model
     if(is.vector(list_varmat_best_model[[i]])){
-      df_sub = suppressMessages(dplyr::bind_cols(out_rf$y, out_rf$x[, list_varmat_best_model[[i]]]))
+      df_sub = suppressMessages(dplyr::bind_cols(out$y, out$x[, list_varmat_best_model[[i]]]))
       colnames(df_sub)[1] = "new_child"
       df_sub_no_na = na.omit(df_sub)
+      df_sub_no_na$new_child = as.factor( df_sub_no_na$new_child)
       fit = ranger::ranger(formula = "new_child ~.", data = df_sub_no_na)
       # save estimated model
       list_all_estimated_models[[counter_model]] = fit
@@ -400,9 +429,10 @@ create_all_models = function(list_varmat_best_model, verbose=T){
       var_mat_dim_i = list_varmat_best_model[[i]]
       ncol_var_mat_dim_i = ncol(var_mat_dim_i)
       for(j in seq(ncol_var_mat_dim_i)){
-        df_sub = suppressMessages(dplyr::bind_cols(out_rf$y, out_rf$x[, var_mat_dim_i[, j]  ]))
+        df_sub = suppressMessages(dplyr::bind_cols(out$y, out$x[, var_mat_dim_i[, j]  ]))
         colnames(df_sub)[1] = "new_child"
         df_sub_no_na = na.omit(df_sub)
+        df_sub_no_na$new_child = as.factor( df_sub_no_na$new_child)
         fit = ranger::ranger(formula = "new_child ~.", data = df_sub_no_na)
         # save estimated model
         list_all_estimated_models[[counter_model]] = fit
@@ -424,33 +454,149 @@ create_all_models = function(list_varmat_best_model, verbose=T){
 
 
 set_all_best_models = create_all_models(list_varmat_best_model = list_varmat_best_model, verbose = T)
-
+length(set_all_best_models)
 
 
 # verify that indeed the df_test_extended have the same column as the train set 
-all(colnames(df_test_extended) == colnames(out_rf$x))
+all(colnames(df_test_extended) == colnames(out$x))
+all(colnames(df_test_imputed_extended) == colnames(out$x))
 
-# prediction step
-predict_w_set_best_model = function(df_test_extended, set_all_best_models, df_test_imputed, list_varmat_best_model){
-  n_to_predict = nrow(df_test_extended)
-  # create vector of prediction
-  vec_prediction = vector(mode = "numeric", length = n_to_predict)
-  for(i in seq(n_to_predict)){
-    # extract vector of the data
-  }
+
+return_which_model_can_be_applied = function(vec_observed_var, list_varmat_best_model, total_nbr_of_best_models, verbose =T){
+  # vec_observed_var = id_var_present
   
+  # create vector that say which model we can use
+  vec_model_feasible = vector(mode = "numeric", length = total_nbr_of_best_models)
+  max_dim = length(list_varmat_best_model)
+  counter= 1
+  for(i in seq(max_dim)){
+
+    # these are for the dimension where there are no best models
+    if(is.null(list_varmat_best_model[[i]])){
+      next
+    }
+    
+    # this is for the dimensions where there is only one "best" model
+    if(is.vector(list_varmat_best_model[[i]])){
+      vec_model_feasible[counter] =  all(list_varmat_best_model[[i]] %in% vec_observed_var)
+
+      
+      # verbose
+      if(verbose){
+        cat(paste0("tried model ", counter , "\n"))
+      }
+      # update counter
+      counter = counter+1
+      
+    }
+    
+    if(is.matrix(list_varmat_best_model[[i]])){
+      var_mat_dim_i = list_varmat_best_model[[i]]
+      ncol_var_mat_dim_i = ncol(var_mat_dim_i)
+      for(j in seq(ncol_var_mat_dim_i)){
+        vec_model_feasible[counter] =  all(list_varmat_best_model[[i]][,j] %in% vec_observed_var)
+        # verbose
+        if(verbose){
+          cat(paste0("tried model ", counter , "\n"))
+        }
+        # update counter
+        counter = counter+1
+      }
+    }
+    
+  }
+  return(vec_model_feasible)
 }
 
 
 
 
-# install.packages("missForest")
-# imp_df_test = complete(mice(df_test)) # do not work, potentially to small to be able to fit regression models here
-# 
-test = df_test_imputed
-sum(is.na(test))
+max_class <- function(vec) {
+  # Count the occurrences of 0 and 1
+  count_0 <- sum(vec == 0)
+  count_1 <- sum(vec == 1)
+  
+  # Determine which class has the higher count
+  if (count_0 > count_1) {
+    return(0)
+  } else if (count_1 > count_0) {
+    return(1)
+  } else {
+    return(sample(c(0,1), 1)) # Return NA if counts are equal
+  }
+}
 
-# compare test# compare with what we have in the train set given (to remove later, we cant have the train test in the repo)
+# prediction step
+predict_w_set_best_model = function(df_test_extended, set_all_best_models, df_test_imputed_extended, list_varmat_best_model){
+  n_to_predict = nrow(df_test_extended)
+  # create vector of prediction
+  vec_prediction = vector(mode = "numeric", length = n_to_predict)
+  for(i in seq(n_to_predict)){
+
+    # extract row
+    row_i = df_test_extended[i, ]
+    # obtain the column with presence of observations
+    id_var_present = which(!is.na(row_i))
+    
+    # check which model are possible to apply
+    model_that_can_be_applied = return_which_model_can_be_applied(vec_observed_var = id_var_present,
+                                                                  list_varmat_best_model = list_varmat_best_model,
+                                                                  total_nbr_of_best_models = total_nbr_of_best_models,
+                                                                  verbose = F)
+    
+    # this is if no model at all can be applied:
+    if(sum(model_that_can_be_applied)==0){
+      # then we use the same row but from the imputed df
+      row_i_imputed = df_test_imputed_extended[i,]
+      levels_vector <- c(0, 1)
+      # Create a factor with levels 0 and 1
+      vec_prediction_row_i_imputed <- factor(levels_vector, levels = c(0, 1))
+      for(model_i in seq(total_nbr_of_best_models)){
+        
+        vec_prediction_row_i_imputed[model_i] =as.factor( predict(set_all_best_models[[model_i]], row_i_imputed)$prediction)
+      }
+      vec_prediction[i] = max_class(vec_prediction_row_i_imputed)
+      # otherwise, if there are some top performing model that we can apply, use these guys
+    }else{
+      levels_vector <- c(0, 1)
+      # Create a factor with levels 0 and 1
+      vec_prediction_row_i <- factor(levels_vector, levels = c(0, 1))
+      # vec_prediction_row_i = vector(mode="character", length= sum(model_that_can_be_applied))
+      id_model_that_can_be_applied = which(model_that_can_be_applied == 1)
+      for(j in seq(sum(model_that_can_be_applied))){
+        vec_prediction_row_i[j] = as.factor(predict(set_all_best_models[[id_model_that_can_be_applied[j]]], row_i)$prediction)
+      }
+      
+      vec_prediction[i]  = max_class(vec_prediction_row_i)
+    }
+    
+    
+
+  }
+  return(vec_prediction)
+
+  
+}
+
+length(set_all_best_models)
+prediction_fake_test_set = predict_w_set_best_model(df_test_extended = df_test_extended, 
+                         set_all_best_models = set_all_best_models,df_test_imputed_extended =  df_test_imputed_extended, list_varmat_best_model = list_varmat_best_model)
+beepr::beep()
+
+df_fake_test_outcome = read.csv("PreFer_fake_outcome.csv")
+df_fake_test_outcome$new_child
+prediction_fake_test_set
+
+
+# how do we perform
+confusion <- caret::confusionMatrix(data = y_pred_dummy, reference = true_y, positive = "1")
+# Extract metrics
+accuracy <- confusion$overall["Accuracy"]
+precision <- confusion$byClass["Pos Pred Value"]
+recall <- confusion$byClass["Sensitivity"]
+f1_score <- 2 * ((precision * recall) / (precision + recall))
+balanced_accuracy = confusion$byClass["Balanced Accuracy"]
+
 
 
 
