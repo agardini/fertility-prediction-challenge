@@ -309,6 +309,82 @@ extract_associated_variables = function(list_varmat, list_best_model){
 
 list_varmat_best_model = extract_associated_variables(list_varmat = out_rf$VarMat, list_best_model = list_best_model)
 
+# check number of best models
+total_nbr_of_best_models = sum(unlist(lapply(list_varmat_best_model, FUN = function(x){dim(x)[2]} )))
+
+# create a big model that countain all ranger models
+create_all_models = function(list_varmat_best_model, verbose=T){
+  list_all_estimated_models = list()
+  max_dimension = length(list_varmat_best_model)
+  counter_model = 1
+  for(i in seq(max_dimension)){
+
+    # these are for the dimension where there are no best models
+    if(is.null(list_varmat_best_model[[i]])){
+      next
+    }
+    # this is for the dimensions where there is only one "best" model
+    if(is.vector(list_varmat_best_model[[i]])){
+      df_sub = suppressMessages(dplyr::bind_cols(out_rf$y, out_rf$x[, list_varmat_best_model[[i]]]))
+      colnames(df_sub)[1] = "new_child"
+      df_sub_no_na = na.omit(df_sub)
+      fit = ranger::ranger(formula = "new_child ~.", data = df_sub_no_na)
+      # save estimated model
+      list_all_estimated_models[[counter_model]] = fit
+      # verbose
+      if(verbose){
+        cat(paste0("fitted model ", counter_model , "\n"))
+      }
+      # update counter
+      counter_model = counter_model+1
+
+    }
+    
+    
+    if(is.matrix(list_varmat_best_model[[i]])){
+      var_mat_dim_i = list_varmat_best_model[[i]]
+      ncol_var_mat_dim_i = ncol(var_mat_dim_i)
+      for(j in seq(ncol_var_mat_dim_i)){
+        df_sub = suppressMessages(dplyr::bind_cols(out_rf$y, out_rf$x[, var_mat_dim_i[, j]  ]))
+        colnames(df_sub)[1] = "new_child"
+        df_sub_no_na = na.omit(df_sub)
+        fit = ranger::ranger(formula = "new_child ~.", data = df_sub_no_na)
+        # save estimated model
+        list_all_estimated_models[[counter_model]] = fit
+        # verbose
+        if(verbose){
+          cat(paste0("fitted model ", counter_model , "\n"))
+        }
+        # update counter
+        counter_model = counter_model+1
+      }
+    }
+    
+  
+    # extract varmat for that dimension
+  }
+  
+  return(list_all_estimated_models)
+}
+
+
+set_all_best_models = create_all_models(list_varmat_best_model = list_varmat_best_model, verbose = T)
+
+
+# prediction step
+predict_w_set_best_model = function(df_test, set_all_best_models, df_test_imputed, list_varmat_best_model){
+  n_to_predict = nrow(df_test)
+  # create vector of prediction
+  vec_prediction = vector(mode = "numeric", length = n_to_predict)
+  for(i in seq(n_to_predict)){
+    # extract vector of the data
+  }
+  
+}
+
+
+
+
 # install.packages("missForest")
 # imp_df_test = complete(mice(df_test)) # do not work, potentially to small to be able to fit regression models here
 # 
