@@ -205,6 +205,121 @@ clean_df <- function(df, background_df = NULL){
   return(data_red)
 }
 
+#-------------------------------- START
+
+# check returned df when running this on fake data
+fake_test_set = read.csv("PreFer_fake_data.csv")
+bg_data = read.csv("PreFer_fake_background_data.csv")
+df_test = clean_df(df = fake_test_set, background_df = bg_data)
+
+# impute na on test set and keep this dataset also
+load("model_data.RData")
+dim(data_new)
+dim(df_test)
+all(colnames(data_new) %in% colnames(df_test) )
+id_col_not_in_test = which(!colnames(data_new) %in% colnames(df_test) )
+colnames(data_new)[id_col_not_in_test]
+
+# more data preparation steps
+# set to NA over all char columns when empty string
+df_test <- df_test %>%
+  mutate(across(where(is.character), ~ na_if(., "")))
+
+# define function count prop of missing
+f_prop_not_na = function(x){
+  mean(!is.na(x))
+}
+
+# check prop of presence per variable, (1- missingness)
+vec_prop_presence = apply(df_test, MARGIN = 2, FUN = f_prop_not_na)
+sort(vec_prop_presence, decreasing = T)
+names(which(vec_prop_presence > 0.8))
+names(which(vec_prop_presence<.8))
+
+# lets not remove them, we use some of them in the training set
+df_test = df_test %>% 
+  # select(names(which(vec_prop_presence > 0.8))) %>% 
+  select(-c(nomem_encr, outcome_available))
+
+
+
+# the outcome is the only variable not present, so all good
+# impute df
+# to use later if we dont have any best perfoming model where all variables are observed
+library(mice)
+str(df_test)
+df_test <- df_test %>%
+  mutate(across(where(is.character), as.factor))
+str(df_test)
+
+# try imputation with mice
+# df_test_imputed = complete(mice(df_test))
+
+# imputation random forest
+df_test_imputed = missForest::missForest(df_test)$ximp
+id_not_in_imputed = which(!colnames(df_test) %in% colnames(df_test_imputed) )
+colnames(df_test)[id_not_in_imputed]
+# there is not presence_debt because all the entries are 0 in the original df_test
+mean(is.na(df_test$presence_debt))
+
+# construct the other variables on df_test and df_test_imputed
+
+
+
+# load the swag output with random forest
+load("swag_rf_prefer_on_extended_dataset.rda")
+out_rf = out
+rm(out)
+# plot F1 score of swag output
+plot(unlist(lapply(X = out_rf$CVs_f1_score, FUN = function(x){max(x, na.rm = T)})), type="l",
+     xlab="Model dimension", ylab="Performance (F1 score)")
+grid(col="grey80", lty=1)
+
+
+# select the set of best models
+# get a given quantile over all f1 score over all models of all dimensions
+quant_to_consider = .95
+quantile_f1_score_to_consider = quantile(unlist(out_rf$CVs_f1_score), na.rm = T, probs = quant_to_consider)
+quantile_f1_score_to_consider
+find_models_above_treshold<- function(vec, threshold) {
+  which(vec > threshold)
+}
+# construct best model id list
+best_models_list <- lapply(out_rf$CVs_f1_score, find_models_above_treshold, quantile_f1_score_to_consider)
+
+# obtain the variables associated with each best models
+dim(out_rf$x)
+extract_associated_variables = function(list_varmat, list_best_model){
+  
+  max_dimension = length(list_varmat)
+  
+  list_varmat_best_model = vector("list", max_dimension)
+  
+  for(i in seq(max_dimension)){
+    
+    if(length(best_models_list[[i]]) == 0){
+      next
+    }else{
+      list_varmat_best_model[[i]] = list_varmat[[i]][, best_models_list[[i]]]
+    }
+  }
+  return(list_varmat_best_model)
+}
+
+
+list_varmat_best_model = extract_associated_variables(list_varmat = out_rf$VarMat, list_best_model = list_best_model)
+
+# install.packages("missForest")
+# imp_df_test = complete(mice(df_test)) # do not work, potentially to small to be able to fit regression models here
+# 
+test = df_test_imputed
+sum(is.na(test))
+
+# compare test# compare with what we have in the train set given (to remove later, we cant have the train test in the repo)
+
+
+
+
 predict_outcomes <- function(df, background_df = NULL, model_path = "./model.rds"){
   # Generate predictions using the saved model and the input dataframe.
 
