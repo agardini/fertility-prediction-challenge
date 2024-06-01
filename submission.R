@@ -16,6 +16,8 @@
 # List your packages here. Don't forget to update packages.R!
 library(tidyverse) # as an example, not used here
 library(mgcv)
+library(ranger)
+
 
 #################################################
 ### function to recode variables -----
@@ -194,13 +196,38 @@ clean_df <- function(df, background_df = NULL){
            religious_participation = factor(religious_participation,
                                             levels=c(0,1),
                                             labels=c("At least once a week","Less than once a week")))
+  
+  
+  # more preparation steps
+  # set to NA over all char columns when empty string
+  data_red<-data_red %>%
+    mutate(across(where(is.character), ~ na_if(., "")))
+  
+  # remove outcome available
+  data_red = data_red %>% select(-c(outcome_available))
 
+  # transform all character variables to factors
+  data_red <- data_red %>%
+    mutate(across(where(is.character), as.factor)) %>% 
+    # remove some covariates which have very little presence in train set
+    select(-c(cf20m129,  cr20m137,  cr20m138,   cr20m139, cr20m140 ,cr20m141, cr20m148, 
+              cr20m149, cr20m150, cr20m151, cf20m130, ca20g065, presence_debt, employment_status))
+  
+  # split numeric and factors
+  data_red_num = data_red %>% select_if(is.numeric) 
+  data_red_cat = data_red %>%  select_if(is.factor) 
 
-  #
-  # for (j in var_sub) {
-  #   data_red[[j]] <- transform_variable(data_red, j, codebook)
-  # }
+  # create power of 2 and power of 3
+  data_red_num_w_power =  data_red_num %>%
+    mutate(across(where(is.numeric), list(square = ~ .^2, cube = ~ .^3, sqrt_root = ~.^(.5)), .names = "{col}_{fn}"))
 
+  # remerge numeric variables extended and cat variables
+  data_red_2 = dplyr::bind_cols(data_red_num_w_power, df_test_cat)
+  
+  # create power of 2 and power of the numeric variables
+  df_test_num_w_power =  df_test_num %>%
+    mutate(across(where(is.numeric), list(square = ~ .^2, cube = ~ .^3, sqrt_root = ~.^(.5)), .names = "{col}_{fn}"))
+  
 
   return(data_red)
 }
@@ -218,7 +245,7 @@ bg_data = read.csv("PreFer_fake_background_data.csv")
 df_test = clean_df(df = fake_test_set, background_df = bg_data)
 colnames(df_test)
 df_test$nomem_encr
-
+df_test$outcome_available
 # impute na on test set and keep this dataset also
 load("model_data.RData")
 dim(data_new)
@@ -234,17 +261,17 @@ colnames(data_new)[id_col_not_in_test]
 df_test <- df_test %>%
   mutate(across(where(is.character), ~ na_if(., "")))
 
-# define function count prop of missing
-f_prop_not_na = function(x){
-  mean(!is.na(x))
-}
-
-# check prop of presence per variable, (1- missingness)
-vec_prop_presence = apply(df_test, MARGIN = 2, FUN = f_prop_not_na)
-sort(vec_prop_presence, decreasing = T)
-names(which(vec_prop_presence > 0.8))
-names(which(vec_prop_presence<.8))
-
+# # define function count prop of missing
+# f_prop_not_na = function(x){
+#   mean(!is.na(x))
+# }
+# 
+# # check prop of presence per variable, (1- missingness)
+# vec_prop_presence = apply(df_test, MARGIN = 2, FUN = f_prop_not_na)
+# sort(vec_prop_presence, decreasing = T)
+# names(which(vec_prop_presence > 0.8))
+# names(which(vec_prop_presence<.8))
+# 
 # lets not remove them, we use some of them in the training set
 df_test = df_test %>% 
   # select(names(which(vec_prop_presence > 0.8))) %>% 
@@ -296,6 +323,7 @@ mean(is.na(df_test$presence_debt))
 
 # compare with X_pref here
 load("X_pref.rda")
+dim(X_pref)
 all(colnames(df_test) == colnames(X_pref))
 all(colnames(df_test_imputed) == colnames(X_pref))
 str(df_test)
@@ -349,17 +377,20 @@ plot(mat[1,], type="l", ylim=c(.2, .9))
 lines(mat[2,], col=2)
 lines(mat[3,], col=3)
 lines(mat[4,], col=4)
-# 30 , 35
-quantile(out$CVs_f1_score[[35]], probs = .9,na.rm = T)
-# prendre tous les modele de taillep lus petite egale a 35 qui on un score plus grand
 
+# 30 , 35
+
+# prendre tous les modele de taillep lus petite egale a 35 qui on un score plus grand
+grid(col="grey80")
 
 
 quantile(c(1,2,3))
 
-quant_to_consider = .9
+quant_to_consider = .80
 quantile_f1_score_to_consider = quantile(unlist(out$CVs_f1_score), na.rm = T, probs = quant_to_consider)
-quantile_f1_score_to_consider
+
+
+quantile_f1_score_to_consider = quantile(out$CVs_f1_score[[35]], probs = .9,na.rm = T)
 find_models_above_treshold<- function(vec, threshold) {
   which(vec > threshold)
 }
@@ -367,11 +398,14 @@ find_models_above_treshold<- function(vec, threshold) {
 # construct best model id list
 best_models_list <- lapply(out$CVs_f1_score, find_models_above_treshold, quantile_f1_score_to_consider)
 
+# subset best model list
+best_models_list = best_models_list[1:35]
+
 # obtain the variables associated with each best models
 dim(out$x)
 extract_associated_variables = function(list_varmat, list_best_model){
   
-  max_dimension = length(list_varmat)
+  max_dimension = length(list_best_model)
   
   list_varmat_best_model = vector("list", max_dimension)
   
@@ -387,7 +421,7 @@ extract_associated_variables = function(list_varmat, list_best_model){
 }
 
 
-list_varmat_best_model = extract_associated_variables(list_varmat = out$VarMat, list_best_model = list_best_model)
+list_varmat_best_model = extract_associated_variables(list_varmat = out$VarMat, list_best_model = best_models_list)
 
 # check number of best models
 total_nbr_of_best_models = sum(unlist(lapply(best_models_list, FUN = function(x){length(x)})))
@@ -533,6 +567,7 @@ predict_w_set_best_model = function(df_test_extended, set_all_best_models, df_te
   vec_prediction = vector(mode = "numeric", length = n_to_predict)
   for(i in seq(n_to_predict)){
 
+
     # extract row
     row_i = df_test_extended[i, ]
     # obtain the column with presence of observations
@@ -589,15 +624,20 @@ prediction_fake_test_set
 
 
 # how do we perform
-confusion <- caret::confusionMatrix(data = y_pred_dummy, reference = true_y, positive = "1")
+confusion <- caret::confusionMatrix(data = as.factor(prediction_fake_test_set), 
+                                    reference = as.factor(df_fake_test_outcome$new_child), positive = "1")
 # Extract metrics
 accuracy <- confusion$overall["Accuracy"]
+accuracy
 precision <- confusion$byClass["Pos Pred Value"]
+precision
 recall <- confusion$byClass["Sensitivity"]
+recall
 f1_score <- 2 * ((precision * recall) / (precision + recall))
-balanced_accuracy = confusion$byClass["Balanced Accuracy"]
+f1_score
 
 
+sort(apply(df_test, MARGIN = 2, FUN = function(x){mean(!is.na(x))}))
 
 
 
