@@ -224,8 +224,6 @@ clean_df <- function(df, background_df = NULL){
   # remerge numeric variables extended and cat variables
   data_red_2 = dplyr::bind_cols(data_red_num_w_power, data_red_cat)
   
-
-
   return(data_red_2)
 }
 
@@ -583,16 +581,81 @@ clean_df <- function(df, background_df = NULL){
 # 
 # sort(apply(df_test, MARGIN = 2, FUN = function(x){mean(!is.na(x))}))
 
+return_which_model_can_be_applied = function(name_variables_observed, list_varmat_best_model, names_in_training, set_all_best_models, verbose =T){
+  
+  total_nbr_of_best_models = length(set_all_best_models)
+  
+  # create vector that say which model we can use
+  vec_model_feasible = vector(mode = "numeric", length = total_nbr_of_best_models)
+  max_dim = length(list_varmat_best_model)
+  counter= 1
+  for(i in seq(max_dim)){
+    
+    
+    # these are for the dimension where there are no best models
+    if(is.null(list_varmat_best_model[[i]])){
+      next
+    }
+    
+    # this is for the dimensions where there is only one "best" model
+    if(is.vector(list_varmat_best_model[[i]])){
+      names_var_needed_in_model = names_in_training [list_varmat_best_model[[i]]]
+      model_possible = as.numeric(all(names_var_needed_in_model %in% name_variables_observed))
+      vec_model_feasible[counter] = model_possible
+      
+      # verbose
+      if(verbose){
+        cat(paste0("tried model ", counter , "\n"))
+      }
+      # update counter
+      counter = counter+1
+      
+    }
+    
+    if(is.matrix(list_varmat_best_model[[i]])){
+      var_mat_dim_i = list_varmat_best_model[[i]]
+      ncol_var_mat_dim_i = ncol(var_mat_dim_i)
+      for(j in seq(ncol_var_mat_dim_i)){
+        names_var_needed_in_model = names_in_training[var_mat_dim_i[,j]]
+        model_possible = as.numeric(all(names_var_needed_in_model %in% name_variables_observed))
+        vec_model_feasible[counter] = model_possible
+        
+        # verbose
+        if(verbose){
+          cat(paste0("tried model ", counter , "\n"))
+        }
+        # update counter
+        counter = counter+1
+      }
+    }
+    
+  }
+  return(vec_model_feasible)
+}
 
+max_class <- function(vec) {
+  # Count the occurrences of 0 and 1
+  count_0 <- sum(vec == 0)
+  count_1 <- sum(vec == 1)
+  
+  # Determine which class has the higher count
+  if (count_0 > count_1) {
+    return(0)
+  } else if (count_1 > count_0) {
+    return(1)
+  } else {
+    return(sample(c(0,1), 1))
+  }
+}
 
 
 
 # for testing purposes
-# # check returned df when running this on fake data
-df = read.csv("PreFer_fake_data.csv")
-background_df = read.csv("PreFer_fake_background_data.csv")
-# df_test = clean_df(df = fake_test_set, background_df = bg_data)
-model_path = "./model.rds"
+# # # check returned df when running this on fake data
+# df = read.csv("PreFer_fake_data.csv")
+# background_df = read.csv("PreFer_fake_background_data.csv")
+# # df_test = clean_df(df = fake_test_set, background_df = bg_data)
+# model_path = "./model.rds"
 
 predict_outcomes <- function(df, background_df = NULL, model_path = "./model.rds"){
   # Generate predictions using the saved model and the input dataframe.
@@ -623,99 +686,82 @@ predict_outcomes <- function(df, background_df = NULL, model_path = "./model.rds
   model <- readRDS(model_path)
 
   # Preprocess the fake / holdout data
-  df <- clean_df(df, background_df)
+  df_test <- clean_df(df, background_df)
   
   # verify that all variables on which trained are in the df
-  all(model$x %in% colnames(df))
+  all(model$x %in% colnames(df_test))
   
   # create a version of the test set which have all variables imputed
+  df_test_imputed = missForest::missForest(df_test)$ximp
   
+  # save vec_id 
+  vec_nomem_encr = df_test%>%pull(nomem_encr)
   
-    # Exclude the variable nomem_encr if this variable is NOT in your model
-  # vars_without_id <- colnames(df)[colnames(df) != "nomem_encr"]
-  df = df %>% select(-c(nomem_encr))
+  # Exclude the variable nomem_encr if this variable is NOT in your model
+  df_test = df_test %>% select(-c(nomem_encr))
+  df_test_imputed = df_test_imputed  %>% select(-c(nomem_encr))
+  n_to_predict = nrow(df_test)
+  # create vector of prediction
+  vec_prediction = vector(mode = "numeric", length = n_to_predict)
   
-  
-  df_row_i = df[1,]
-  vec_observed_var = which(!is.na(df_row_i) )
-  
-  return_which_model_can_be_applied = function(vec_observed_var, list_varmat_best_model, total_nbr_of_best_models, verbose =T){
-    # vec_observed_var = id_var_present
-    
-    # create vector that say which model we can use
-    vec_model_feasible = vector(mode = "numeric", length = total_nbr_of_best_models)
-    max_dim = length(list_varmat_best_model)
-    counter= 1
-    for(i in seq(max_dim)){
-      
-      # these are for the dimension where there are no best models
-      if(is.null(list_varmat_best_model[[i]])){
-        next
-      }
-      
-      # this is for the dimensions where there is only one "best" model
-      if(is.vector(list_varmat_best_model[[i]])){
-        vec_model_feasible[counter] =  all(list_varmat_best_model[[i]] %in% vec_observed_var)
-        
-        
-        # verbose
-        if(verbose){
-          cat(paste0("tried model ", counter , "\n"))
-        }
-        # update counter
-        counter = counter+1
-        
-      }
-      
-      if(is.matrix(list_varmat_best_model[[i]])){
-        var_mat_dim_i = list_varmat_best_model[[i]]
-        ncol_var_mat_dim_i = ncol(var_mat_dim_i)
-        for(j in seq(ncol_var_mat_dim_i)){
-          vec_model_feasible[counter] =  all(list_varmat_best_model[[i]][,j] %in% vec_observed_var)
-          # verbose
-          if(verbose){
-            cat(paste0("tried model ", counter , "\n"))
-          }
-          # update counter
-          counter = counter+1
-        }
-      }
-      
-    }
-    return(vec_model_feasible)
-  }
-  
-  
-  
-  
-  max_class <- function(vec) {
-    # Count the occurrences of 0 and 1
-    count_0 <- sum(vec == 0)
-    count_1 <- sum(vec == 1)
-    
-    # Determine which class has the higher count
-    if (count_0 > count_1) {
-      return(0)
-    } else if (count_1 > count_0) {
-      return(1)
-    } else {
-      return(sample(c(0,1), 1)) # Return NA if counts are equal
-    }
-  }
-  
-  
-  
-  
-  # Generate predictions from model
-  predictions <- predict(model,
-                         subset(df, select = vars_without_id),
-                         type = "response")
+  # total
+  total_nbr_of_best_models = length(model$set_all_best_models)
 
+  for(i in seq(n_to_predict)){
+      # extract row
+      row_i = df_test[i, ]
+      # obtain the column with presence of observations
+      id_var_present = which(!is.na(row_i))
+      name_variables_observed = colnames(df_test)[id_var_present]
+      model_that_can_be_applied = return_which_model_can_be_applied(name_variables_observed = name_variables_observed,
+                                        list_varmat_best_model =  model$list_varmat_best_model,
+                                        names_in_training = model$colnames_X,
+                                        set_all_best_models = model$set_all_best_models,
+                                        verbose = F
+                                          )
+      
+     # this is if no model at all can be applied:
+     if(sum(model_that_can_be_applied)==0){
+       # then we use the same row but from the imputed df
+       row_i_imputed = df_test_imputed[i,]
+       # levels_vector <- c(0, 1)
+       # # Create a numeric vector 
+       vec_prediction_row_i_imputed = vector(mode = "numeric", length=total_nbr_of_best_models)
+       # vec_prediction_row_i_imputed <- factor(levels_vector, levels = c(0, 1))
+       for(model_i in seq(total_nbr_of_best_models)){
+         pred_factor= predict(model$set_all_best_models[[model_i]], row_i_imputed)$prediction
+         # Convert factor to numeric (0 or 1)
+         pred_factor_numeric <- as.numeric(as.character(pred_factor))
+         vec_prediction_row_i_imputed[model_i] <- pred_factor_numeric
+
+       }
+       vec_prediction[i] = max_class(vec_prediction_row_i_imputed)
+       # otherwise, if there are some top performing model that we can apply, use these guys
+     }else{
+       vec_prediction_row_i = vector(mode = "numeric", length=sum(model_that_can_be_applied))
+       id_model_that_can_be_applied = which(model_that_can_be_applied == 1)
+       for(j in seq(sum(model_that_can_be_applied))){
+         pred_factor= predict(model$set_all_best_models[[id_model_that_can_be_applied[j]]], row_i)$prediction
+         # Convert factor to numeric (0 or 1)
+         pred_factor_numeric <- as.numeric(as.character(pred_factor))
+         vec_prediction_row_i[j] <- pred_factor_numeric
+       }
+       vec_prediction[i]  = max_class(vec_prediction_row_i)
+     
+     }
+      
+    }
+
+  # # Generate predictions from model
+  # predictions <- predict(model,
+  #                        subset(df, select = vars_without_id),
+  #                        type = "response")
+  
   # Create predictions that should be 0s and 1s rather than, e.g., probabilities
-  predictions <- ifelse(predictions > 0.25, 1, 0)
+  # predictions <- ifelse(predictions > 0.25, 1, 0)
 
   # Output file should be data.frame with two columns, nomem_encr and predictions
-  df_predict <- data.frame("nomem_encr" = df[ , "nomem_encr" ], "prediction" = predictions)
+  df_predict <- data.frame("nomem_encr" = vec_nomem_encr, "prediction" = vec_prediction)
   # Force columnnames (overrides names that may be given by `predict`)
   names(df_predict) <- c("nomem_encr", "prediction")
 
