@@ -9,14 +9,10 @@
 
 
 
-# manual implementation
+# manual implementation k fold cross validation for random forest ranger
 cv_k_fold_rf = function(df, formula, k = 10){
   
-  # df = df_sub_no_na
-  # formula ="new_child~."
-  # k = 10
-  
-  
+
   # identify categorical variable
   cat_col = df %>% dplyr::select_if(is.factor) %>% colnames() %>% as.vector()
   # add always to stratify by new child the dependant var
@@ -91,13 +87,13 @@ model_combination <- function(
 
 
 
-# for testing
-data <- read_csv("PreFer_train_data.csv")
-# backgroud data (according to the paper, 
-# relevant variables are already included in the previous dataset)
-data_back <- read_csv("PreFer_train_background_data.csv")
-cleaned_df = clean_df(df = data, background_df = data_back)
-outcome_df = read_csv(file = "PreFer_train_outcome.csv")
+# # for testing
+# data <- read_csv("PreFer_train_data.csv")
+# # backgroud data (according to the paper, 
+# # relevant variables are already included in the previous dataset)
+# data_back <- read_csv("PreFer_train_background_data.csv")
+# cleaned_df = clean_df(df = data, background_df = data_back)
+# outcome_df = read_csv(file = "PreFer_train_outcome.csv")
 
 
 
@@ -124,7 +120,7 @@ train_save_model <- function(cleaned_df, outcome_df) {
                   alpha = .2, #normally a small value, corresponds to the kept at each iteration
                   m = 20L, # max number of models explored per dimension
                   seed = 123L, #for replicability
-                  verbose = T #keeps track of completed dimensions)
+                  verbose = F #keeps track of completed dimensions)
   )
   
   dim_x <- dim(X)
@@ -168,10 +164,12 @@ train_save_model <- function(cleaned_df, outcome_df) {
     cv_errors_recall[i] <- res_cv["recall"]
     sample_size[i] = nrow(df_sub)
     
-    cat(paste0("Variable ",i,"/", ncol(X),". accuracy of ", round(cv_errors[i] , 4), "\n"))
+    if(control$verbose){
+      cat(paste0("Variable ",i,"/", ncol(X),". accuracy of ", round(cv_errors[i] , 4), "\n"))
+      
+    }
   }
 
-  
   # create varmat for dimension 1
   var_mat <- seq_len(p)
   dim(var_mat) <- c(1,p)
@@ -180,7 +178,6 @@ train_save_model <- function(cleaned_df, outcome_df) {
   CVs_accuracy[[d]] = cv_errors_accuracy
   CVs_precison[[d]] = cv_errors_precison
   CVs_recall[[d]] = cv_errors_recall
-  
   
   cv_alpha[d] <- quantile(cv_errors,control$alpha,na.rm=T)
   IDs[[d]] <- which(cv_errors >= cv_alpha[d])
