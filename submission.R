@@ -301,7 +301,7 @@ max_class <- function(vec) {
 
 
 
-# for testing 
+# # for testing
 # # check returned df when running this on fake data
 # df = read.csv("PreFer_fake_data.csv")
 # background_df = read.csv("PreFer_fake_background_data.csv")

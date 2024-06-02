@@ -97,7 +97,7 @@ model_combination <- function(
 # cleaned_df = clean_df(df = data, background_df = data_back)
 # outcome_df = read_csv(file = "not_commit/PreFer_train_outcome.csv")
 # 
-# 
+
 
 train_save_model <- function(cleaned_df, outcome_df) {
   # Trains a model using the cleaned dataframe and saves the model to a file.
@@ -120,7 +120,7 @@ train_save_model <- function(cleaned_df, outcome_df) {
   # Meta-parameters swag algorithm
   control <- list(pmax = 35,  # maximum dimension explored
                   alpha = .15, #normally a small value, corresponds to the kept at each iteration
-                  m = 80L, # max number of models explored per dimension
+                  m = 40L, # max number of models explored per dimension
                   seed = 123L, #for replicability
                   verbose = T #keeps track of completed dimensions)
   )
@@ -167,7 +167,7 @@ train_save_model <- function(cleaned_df, outcome_df) {
     sample_size[i] = nrow(df_sub)
     
     if(control$verbose){
-      cat(paste0("Variable ",i,"/", ncol(X),". accuracy of ", round(cv_errors[i] , 4), "\n"))
+      cat(paste0("Variable ",i,"/", ncol(X),". balanced accuracy of ", round(cv_errors[i] , 4), "\n"))
       
     }
   }
@@ -181,7 +181,7 @@ train_save_model <- function(cleaned_df, outcome_df) {
   CVs_precison[[d]] = cv_errors_precison
   CVs_recall[[d]] = cv_errors_recall
   
-  cv_alpha[d] <- quantile(cv_errors,control$alpha,na.rm=T)
+  cv_alpha[d] <- quantile(cv_errors, (1-control$alpha), na.rm=T)
   IDs[[d]] <- which(cv_errors >= cv_alpha[d])
   id_screening <- IDs[[d]]
   VarMat[[d]] <- var_mat
@@ -237,12 +237,21 @@ train_save_model <- function(cleaned_df, outcome_df) {
     CVs_precison[[d]] = cv_errors_precison
     CVs_recall[[d]] = cv_errors_recall
     VarMat[[d]] <- var_mat
-    cv_alpha[d] <- quantile(cv_errors,control$alpha,na.rm=T)
+    cv_alpha[d] <- quantile(cv_errors,probs = (1-control$alpha),na.rm=T)
     IDs[[d]] <- which(cv_errors >= cv_alpha[d])
+    # if proportion of f1 score per tested model , switch to f1 score, to do, for now...
+    measure_considered= " balanced accuracy"
+    if(d > 10){
+      # switch for f1 score
+      measure_considered= " f1 score"
+      cv_alpha[d] <- quantile(cv_errors_f1_score,probs = (1-control$alpha), na.rm=T) # save in vector of quantile per dimension
+      IDs[[d]] <- which(cv_errors_f1_score >= cv_alpha[d])
+    }
+    
     Sample_size[[d]] = sample_size
     
     
-    if(control$verbose) print(paste0("Dimension explored: ", d ," - CV errors at alpha: ",round(cv_alpha[d],4)))
+    if(control$verbose) print(paste0("Dimension explored: ", d ,",", measure_considered," at quantile ",(1-control$alpha),":" ,round(cv_alpha[d],4)))
     if(ncol(var_mat)==1) break 
   }
   
