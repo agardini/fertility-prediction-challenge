@@ -19,6 +19,7 @@ library(mgcv)
 library(ranger)
 
 
+
 #################################################
 ### function to recode variables -----
 #
@@ -700,7 +701,10 @@ predict_outcomes <- function(df, background_df = NULL, model_path = "./model.rds
   # Exclude the variable nomem_encr if this variable is NOT in your model
   df_test = df_test %>% select(-c(nomem_encr))
   df_test_imputed = df_test_imputed  %>% select(-c(nomem_encr))
+  
+  # check nbr of row to predict in df test
   n_to_predict = nrow(df_test)
+  
   # create vector of prediction
   vec_prediction = vector(mode = "numeric", length = n_to_predict)
   

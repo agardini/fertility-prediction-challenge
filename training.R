@@ -118,7 +118,7 @@ train_save_model <- function(cleaned_df, outcome_df) {
   # Meta-parameters swag algorithm
   control <- list(pmax = 35,  # maximum dimension explored
                   alpha = .2, #normally a small value, corresponds to the kept at each iteration
-                  m = 20L, # max number of models explored per dimension
+                  m = 50L, # max number of models explored per dimension
                   seed = 123L, #for replicability
                   verbose = F #keeps track of completed dimensions)
   )
@@ -364,9 +364,9 @@ train_save_model <- function(cleaned_df, outcome_df) {
  
   # save list of estimated models
   model = list(
-    "set_all_best_models" = set_all_best_models,
-    "list_varmat_best_model" = list_varmat_best_model,
-    "colnames_X" = colnames(X)
+    "set_all_best_models" = set_all_best_models, # contain all estimated RF
+    "list_varmat_best_model" = list_varmat_best_model, # contain the index of the variables of each top model
+    "colnames_X" = colnames(X) # contain the names of the variables of the training set
   )
   
   # Save the model
