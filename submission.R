@@ -222,14 +222,11 @@ clean_df <- function(df, background_df = NULL){
     mutate(across(where(is.numeric), list(square = ~ .^2, cube = ~ .^3, sqrt_root = ~.^(.5)), .names = "{col}_{fn}"))
 
   # remerge numeric variables extended and cat variables
-  data_red_2 = dplyr::bind_cols(data_red_num_w_power, df_test_cat)
-  
-  # create power of 2 and power of the numeric variables
-  df_test_num_w_power =  df_test_num %>%
-    mutate(across(where(is.numeric), list(square = ~ .^2, cube = ~ .^3, sqrt_root = ~.^(.5)), .names = "{col}_{fn}"))
+  data_red_2 = dplyr::bind_cols(data_red_num_w_power, data_red_cat)
   
 
-  return(data_red)
+
+  return(data_red_2)
 }
 
 #-------------------------------- START
@@ -243,67 +240,68 @@ fake_test_set = read.csv("PreFer_fake_data.csv")
 bg_data = read.csv("PreFer_fake_background_data.csv")
 
 df_test = clean_df(df = fake_test_set, background_df = bg_data)
-colnames(df_test)
-df_test$nomem_encr
-df_test$outcome_available
-# impute na on test set and keep this dataset also
-load("model_data.RData")
-dim(data_new)
-dim(df_test)
-all(colnames(data_new) %in% colnames(df_test) )
-id_col_not_in_test = which(!colnames(data_new) %in% colnames(df_test) )
-colnames(data_new)[id_col_not_in_test]
-
-# the outcome is the only variable not present, so all good
-
-# more data preparation steps
-# set to NA over all char columns when empty string
-df_test <- df_test %>%
-  mutate(across(where(is.character), ~ na_if(., "")))
-
-# # define function count prop of missing
-# f_prop_not_na = function(x){
-#   mean(!is.na(x))
-# }
+all(colnames(out$x) %in% colnames(df_test))
+# colnames(df_test)
+# df_test$nomem_encr
+# df_test$outcome_available
+# # impute na on test set and keep this dataset also
+# load("model_data.RData")
+# dim(data_new)
+# dim(df_test)
+# all(colnames(data_new) %in% colnames(df_test) )
+# id_col_not_in_test = which(!colnames(data_new) %in% colnames(df_test) )
+# colnames(data_new)[id_col_not_in_test]
 # 
-# # check prop of presence per variable, (1- missingness)
-# vec_prop_presence = apply(df_test, MARGIN = 2, FUN = f_prop_not_na)
-# sort(vec_prop_presence, decreasing = T)
-# names(which(vec_prop_presence > 0.8))
-# names(which(vec_prop_presence<.8))
+# # the outcome is the only variable not present, so all good
 # 
-# lets not remove them, we use some of them in the training set
-df_test = df_test %>% 
-  # select(names(which(vec_prop_presence > 0.8))) %>% 
-  select(-c(nomem_encr, outcome_available))
-
-
-df_test <- df_test %>%
-  mutate(across(where(is.character), as.factor)) %>% 
-  select(-c(cf20m129,  cr20m137,  cr20m138,   cr20m139, cr20m140 ,cr20m141, cr20m148, cr20m149, cr20m150, cr20m151, cf20m130, ca20g065, presence_debt,employment_status))
-str(df_test)
-# Column names in the desired order
-column_order <- c("cf20m009", "cf20m011", "cf20m022", "cf20m024", "cf20m128", 
-                  "cf20m454", "cf20m526", "ca20g005", "ca20g006", "ca20g007", 
-                  "ca20g008", "ca20g009", "ca20g010", "ca20g011", "ca20g057", 
-                  "ca20g058", "ca20g060", "ca20g061", "ca20g062", "ci20m008", 
-                  "ch20m004", "ch20m018", "ch20m178", "cp20l010", "cp20l016", 
-                  "cp20l019", "cp20l201", "cr20m030", "cr20m041", "cr20m089", 
-                  "cr20m134", "cr20m143", "cr20m162", "cs20m001", "cs20m063", 
-                  "cs20m283", "cs20m285", "cs20m286", "cs20m287", "birthyear_bg", 
-                  "gender_bg", "migration_background_bg", "belbezig_2020", 
-                  "burgstat_2020", "nettoink_f_2020", "oplcat_2020", "partner_2020", 
-                  "sted_2020", "woning_2020", "woonvorm_2020", "positie", 
-                  "aantalhh", "aantalki", "ca20g078", "ca20g087", "nettohh_f_2020", 
-                  "having_children_future", "assets", "type_dwelling", 
-                  "log_net_household_income", "log_net_personal_income", 
-                  "desired_nr_add_children", "years_next_children", 
-                  "birth_year_mother_cat", "mig_by_origin", "mig_by_generation", 
-                  "civil_status", "religious_participation")
-
-# Reorder columns using dplyr
-df_test <- df_test %>%
-  select(all_of(column_order))
+# # more data preparation steps
+# # set to NA over all char columns when empty string
+# df_test <- df_test %>%
+#   mutate(across(where(is.character), ~ na_if(., "")))
+# 
+# # # define function count prop of missing
+# # f_prop_not_na = function(x){
+# #   mean(!is.na(x))
+# # }
+# # 
+# # # check prop of presence per variable, (1- missingness)
+# # vec_prop_presence = apply(df_test, MARGIN = 2, FUN = f_prop_not_na)
+# # sort(vec_prop_presence, decreasing = T)
+# # names(which(vec_prop_presence > 0.8))
+# # names(which(vec_prop_presence<.8))
+# # 
+# # lets not remove them, we use some of them in the training set
+# df_test = df_test %>% 
+#   # select(names(which(vec_prop_presence > 0.8))) %>% 
+#   select(-c(nomem_encr, outcome_available))
+# 
+# 
+# df_test <- df_test %>%
+#   mutate(across(where(is.character), as.factor)) %>% 
+#   select(-c(cf20m129,  cr20m137,  cr20m138,   cr20m139, cr20m140 ,cr20m141, cr20m148, cr20m149, cr20m150, cr20m151, cf20m130, ca20g065, presence_debt,employment_status))
+# str(df_test)
+# # Column names in the desired order
+# column_order <- c("cf20m009", "cf20m011", "cf20m022", "cf20m024", "cf20m128", 
+#                   "cf20m454", "cf20m526", "ca20g005", "ca20g006", "ca20g007", 
+#                   "ca20g008", "ca20g009", "ca20g010", "ca20g011", "ca20g057", 
+#                   "ca20g058", "ca20g060", "ca20g061", "ca20g062", "ci20m008", 
+#                   "ch20m004", "ch20m018", "ch20m178", "cp20l010", "cp20l016", 
+#                   "cp20l019", "cp20l201", "cr20m030", "cr20m041", "cr20m089", 
+#                   "cr20m134", "cr20m143", "cr20m162", "cs20m001", "cs20m063", 
+#                   "cs20m283", "cs20m285", "cs20m286", "cs20m287", "birthyear_bg", 
+#                   "gender_bg", "migration_background_bg", "belbezig_2020", 
+#                   "burgstat_2020", "nettoink_f_2020", "oplcat_2020", "partner_2020", 
+#                   "sted_2020", "woning_2020", "woonvorm_2020", "positie", 
+#                   "aantalhh", "aantalki", "ca20g078", "ca20g087", "nettohh_f_2020", 
+#                   "having_children_future", "assets", "type_dwelling", 
+#                   "log_net_household_income", "log_net_personal_income", 
+#                   "desired_nr_add_children", "years_next_children", 
+#                   "birth_year_mother_cat", "mig_by_origin", "mig_by_generation", 
+#                   "civil_status", "religious_participation")
+# 
+# # Reorder columns using dplyr
+# df_test <- df_test %>%
+#   select(all_of(column_order))
 
 # impute df
 # to use later if we dont have any best perfoming model where all variables are observed
@@ -386,10 +384,8 @@ grid(col="grey80")
 
 quantile(c(1,2,3))
 
-quant_to_consider = .80
-quantile_f1_score_to_consider = quantile(unlist(out$CVs_f1_score), na.rm = T, probs = quant_to_consider)
 
-
+# construct set of best models
 quantile_f1_score_to_consider = quantile(out$CVs_f1_score[[35]], probs = .9,na.rm = T)
 find_models_above_treshold<- function(vec, threshold) {
   which(vec > threshold)
