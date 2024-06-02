@@ -336,12 +336,13 @@ predict_outcomes <- function(df, background_df = NULL, model_path = "./model.rds
 
   # Preprocess the fake / holdout data
   df_test <- clean_df(df, background_df)
-  
+  str(df_test)
   # verify that all variables on which trained are in the df
   all(model$x %in% colnames(df_test))
   
   # create a version of the test set which have all variables imputed
-  df_test_imputed = missForest::missForest(df_test)$ximp
+  # minor problem to be solved here
+  df_test_imputed = suppressWarnings(missForest::missForest(df_test, maxiter = 15, ntree = 200)$ximp)
   
   # save vec_id 
   vec_nomem_encr = df_test%>%pull(nomem_encr)
