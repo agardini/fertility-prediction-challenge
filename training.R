@@ -7,7 +7,7 @@
 # number of folds, model, et cetera
 
 
-
+library(tidyverse)
 
 # manual implementation k fold cross validation for random forest ranger
 cv_k_fold_rf = function(df, formula, k = 10){
@@ -47,6 +47,9 @@ cv_k_fold_rf = function(df, formula, k = 10){
     precision <- confusion$byClass["Pos Pred Value"]
     recall <- confusion$byClass["Sensitivity"]
     f1_score <- 2 * ((precision * recall) / (precision + recall))
+    if(is.na(f1_score)){
+      f1_score = 0
+    }
     balanced_accuracy = confusion$byClass["Balanced Accuracy"]
     # save in matrix
     metrics_mat[i, ] = c(accuracy, precision, recall, f1_score, balanced_accuracy)
@@ -86,16 +89,15 @@ model_combination <- function(
 }
 
 
-
-# # for testing
-# data <- read_csv("PreFer_train_data.csv")
-# # backgroud data (according to the paper, 
-# # relevant variables are already included in the previous dataset)
-# data_back <- read_csv("PreFer_train_background_data.csv")
+# 
+# # # for testing
+# data <- read_csv("not_commit/PreFer_train_data.csv")
+# # # backgroud data
+# data_back <- read_csv("not_commit/PreFer_train_background_data.csv")
 # cleaned_df = clean_df(df = data, background_df = data_back)
-# outcome_df = read_csv(file = "PreFer_train_outcome.csv")
-
-
+# outcome_df = read_csv(file = "not_commit/PreFer_train_outcome.csv")
+# 
+# 
 
 train_save_model <- function(cleaned_df, outcome_df) {
   # Trains a model using the cleaned dataframe and saves the model to a file.
@@ -117,10 +119,10 @@ train_save_model <- function(cleaned_df, outcome_df) {
   
   # Meta-parameters swag algorithm
   control <- list(pmax = 35,  # maximum dimension explored
-                  alpha = .2, #normally a small value, corresponds to the kept at each iteration
-                  m = 50L, # max number of models explored per dimension
+                  alpha = .15, #normally a small value, corresponds to the kept at each iteration
+                  m = 80L, # max number of models explored per dimension
                   seed = 123L, #for replicability
-                  verbose = F #keeps track of completed dimensions)
+                  verbose = T #keeps track of completed dimensions)
   )
   
   dim_x <- dim(X)
@@ -187,6 +189,8 @@ train_save_model <- function(cleaned_df, outcome_df) {
   
   for(d in 2:control$pmax){
     
+    # d=2
+    
     # Build all combinations
     var_mat <- model_combination(id_screening,subset(VarMat[[d-1L]], select=IDs[[d-1]]))
     
@@ -198,6 +202,12 @@ train_save_model <- function(cleaned_df, outcome_df) {
     
     # Compute CV errors
     cv_errors <- rep(NA,ncol(var_mat))
+    cv_errors_f1_score   <- rep(NA,ncol(var_mat))
+    cv_errors_accuracy <- rep(NA,ncol(var_mat))
+    cv_errors_precison <- rep(NA,ncol(var_mat))
+    cv_errors_recall <- rep(NA,ncol(var_mat))
+    
+    
     sample_size = vector(mode = "numeric", length = ncol(var_mat))
     
     for(i in seq_len(ncol(var_mat))){
@@ -261,7 +271,9 @@ train_save_model <- function(cleaned_df, outcome_df) {
   # extract best model
   
   # construct set of best models
-  quantile_f1_score_to_consider = quantile(out$CVs_f1_score[[35]], probs = .9,na.rm = T)
+  total_dim_explored = length(out$CVs_f1_score)
+  dim_up_to = min(total_dim_explored, 35)
+  quantile_f1_score_to_consider = quantile(out$CVs_f1_score[[dim_up_to]], probs = .9,na.rm = T)
   
   find_models_above_treshold<- function(vec, threshold) {
     which(vec > threshold)
@@ -279,21 +291,21 @@ train_save_model <- function(cleaned_df, outcome_df) {
     
     for(i in seq(max_dimension)){
       
-      if(length(best_models_list[[i]]) == 0){
+      if(length(list_best_model[[i]]) == 0){
         next
       }else{
-        list_varmat_best_model[[i]] = list_varmat[[i]][, best_models_list[[i]]]
+        list_varmat_best_model[[i]] = list_varmat[[i]][, list_best_model[[i]]]
       }
     }
     return(list_varmat_best_model)
   }
   
   
-  list_varmat_best_model = extract_associated_variables(list_varmat = out$VarMat, list_best_model = best_models_list)
+  list_varmat_best_model = extract_associated_variables(list_varmat = out$VarMat, list_best_model = list_best_model)
   
   # check number of best models
-  total_nbr_of_best_models = sum(unlist(lapply(best_models_list, FUN = function(x){length(x)})))
-  total_nbr_of_best_models
+  total_nbr_of_best_models = sum(unlist(lapply(list_best_model, FUN = function(x){length(x)})))
+  # total_nbr_of_best_models
   
   # create a big model that countain all ranger models
   create_all_models = function(list_varmat_best_model, X, y, verbose=T){
@@ -372,12 +384,8 @@ train_save_model <- function(cleaned_df, outcome_df) {
   # Save the model
   saveRDS(model, "model.rds")
   
-  
-  
-  
-  
-  
-  
+  # Inform the user
+  cat("Model saved at ", "model.rds", "\n")
   
   # --------------------- previous approach of Aldo
 
@@ -404,3 +412,9 @@ train_save_model <- function(cleaned_df, outcome_df) {
 
 
 }
+
+
+# train_save_model(cleaned_df = cleaned_df, outcome_df = outcome_df)
+
+
+
