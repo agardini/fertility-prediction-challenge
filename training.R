@@ -119,8 +119,8 @@ train_save_model <- function(cleaned_df, outcome_df) {
   
   # Meta-parameters swag algorithm
   control <- list(pmax = 35,  # maximum dimension explored
-                  alpha = .15, #normally a small value, corresponds to the kept at each iteration
-                  m = 40L, # max number of models explored per dimension
+                  alpha = .1, #normally a small value, corresponds to the kept at each iteration
+                  m = 80L, # max number of models explored per dimension
                   seed = 123L, #for replicability
                   verbose = T #keeps track of completed dimensions)
   )
@@ -424,6 +424,6 @@ train_save_model <- function(cleaned_df, outcome_df) {
 
 
 # train_save_model(cleaned_df = cleaned_df, outcome_df = outcome_df)
-
+# 
 
 
